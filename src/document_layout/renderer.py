@@ -7,6 +7,7 @@ bounding box for downstream value population.
 """
 
 import json
+import random
 from pathlib import Path
 
 import svgwrite
@@ -344,3 +345,156 @@ def save_metadata(metadata: dict, path: str | Path) -> None:
     """Write layout metadata to a JSON file."""
     with open(path, "w") as f:
         json.dump(metadata, f, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Field types that get handwriting vs machine text
+# ---------------------------------------------------------------------------
+
+# Fields where the value is written by hand (owner/lienholder fills in later)
+HANDWRITING_FIELDS = {"signature"}
+
+# Fields rendered with handwriting style (by field name patterns)
+HANDWRITING_NAME_PATTERNS = {"_release_sig", "_release_title", "_release_date"}
+
+
+def _is_handwriting_field(field_name: str, field_type: str) -> bool:
+    """Determine if a field should be rendered with handwriting."""
+    if field_type == "signature":
+        return True
+    for pattern in HANDWRITING_NAME_PATTERNS:
+        if pattern in field_name:
+            return True
+    return False
+
+
+def _get_handwriting_group(field_name: str) -> str:
+    """Determine which 'person' is writing this field.
+
+    Fields from the same lien release are written by the same person,
+    so they share a handwriting font. Different liens = different people.
+    """
+    if field_name.startswith("first_"):
+        return "first"
+    elif field_name.startswith("second_"):
+        return "second"
+    return "default"
+
+
+def fill_values(
+    drawing: svgwrite.Drawing,
+    metadata: dict,
+    values: dict,
+    rng: random.Random | None = None,
+    machine_font_path: Path | str | None = None,
+) -> None:
+    """Fill field values onto the SVG drawing using the layout metadata.
+
+    Machine-filled fields (VIN, year, owner name, etc.) are rendered with
+    machinewriting using one consistent font. Handwriting fields (signatures,
+    release dates/titles) are rendered per-person — each lienholder gets a
+    different handwriting font, but all fields from the same person match.
+
+    Args:
+        drawing: The svgwrite.Drawing to add text to.
+        metadata: The metadata dict returned by render_layout().
+        values: Dict mapping field names to string values.
+        rng: Random instance for reproducibility.
+        machine_font_path: Specific machine font, or None for random.
+    """
+    from src.utils.handwriting import (
+        FONT_FILES as HW_FONTS,
+        render_handwriting,
+        render_signature,
+    )
+    from src.utils.machinewriting import (
+        FONT_FILES as MW_FONTS,
+        render_machinetext,
+    )
+
+    if rng is None:
+        rng = random.Random()
+
+    # Pick machine font once for the whole document
+    if machine_font_path is None:
+        machine_font_path = rng.choice(MW_FONTS)
+
+    # Pick a different handwriting font per person (lienholder)
+    # Shuffle to avoid the same font for different people
+    hw_pool = list(HW_FONTS)
+    rng.shuffle(hw_pool)
+    hw_font_by_group: dict[str, Path] = {}
+
+    def _get_hw_font(group: str) -> Path:
+        if group not in hw_font_by_group:
+            idx = len(hw_font_by_group) % len(hw_pool)
+            hw_font_by_group[group] = hw_pool[idx]
+        return hw_font_by_group[group]
+
+    # Compute a consistent font size from the layout.
+    # Use the median value_rect height of fillable fields to set a uniform
+    # render size for both machine and handwriting text.
+    fillable_heights = []
+    for block in metadata["blocks"]:
+        for field in block["fields"]:
+            if field["style"] == "label_only":
+                continue
+            h = field["value_rect"]["h"]
+            if h > 0:
+                fillable_heights.append(h)
+
+    if fillable_heights:
+        fillable_heights.sort()
+        median_h = fillable_heights[len(fillable_heights) // 2]
+        machine_font_size = max(48, int(median_h * 1.5))
+        handwriting_font_size = max(48, int(median_h * 1.8))
+    else:
+        machine_font_size = 72
+        handwriting_font_size = 80
+
+    for block in metadata["blocks"]:
+        for field in block["fields"]:
+            name = field["name"]
+            field_type = field["field_type"]
+            style = field["style"]
+
+            # Skip label-only fields (static text, not fillable)
+            if style == "label_only":
+                continue
+
+            # Get value from the values dict
+            value = values.get(name)
+            if value is None:
+                continue
+
+            vr = field["value_rect"]
+            x, y, w, h = vr["x"], vr["y"], vr["w"], vr["h"]
+
+            # Skip if the value rect has no area
+            if w <= 0 or h <= 0:
+                continue
+
+            if _is_handwriting_field(name, field_type):
+                group = _get_handwriting_group(name)
+                hw_font = _get_hw_font(group)
+
+                if field_type == "signature":
+                    g = render_signature(
+                        drawing, value, x, y, w, h,
+                        font_path=hw_font,
+                        font_size=handwriting_font_size, rng=rng,
+                    )
+                else:
+                    g = render_handwriting(
+                        drawing, value, x, y, w, h,
+                        font_path=hw_font,
+                        font_size=handwriting_font_size, rng=rng,
+                    )
+            else:
+                g = render_machinetext(
+                    drawing, value, x, y, w, h,
+                    font_path=machine_font_path,
+                    font_size=machine_font_size, rng=rng,
+                )
+
+            drawing.add(g)

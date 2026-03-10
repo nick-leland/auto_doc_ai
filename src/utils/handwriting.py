@@ -89,6 +89,46 @@ def _img_to_data_uri(img: Image.Image) -> str:
     return f"data:image/png;base64,{b64}"
 
 
+def _place_image(
+    drawing: svgwrite.Drawing,
+    img: Image.Image,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    font_size: int | None,
+) -> svgwrite.container.Group:
+    """Scale and position a rendered text image into a value box."""
+    img_w, img_h = img.size
+
+    if font_size is not None:
+        # Fixed scale: 1 render pixel -> a fixed number of SVG units.
+        # Constant regardless of box height so all handwriting looks the same size.
+        scale = 0.5
+        if img_w * scale > width * 0.95:
+            scale = (width * 0.95) / img_w
+        if img_h * scale > height * 0.85:
+            scale = (height * 0.85) / img_h
+    else:
+        scale = min(width / img_w, height / img_h) * 0.9
+
+    display_w = img_w * scale
+    display_h = img_h * scale
+
+    img_x = x + height * 0.05
+    img_y = y + (height - display_h) / 2
+
+    data_uri = _img_to_data_uri(img)
+
+    g = drawing.g()
+    g.add(drawing.image(
+        href=data_uri,
+        insert=(img_x, img_y),
+        size=(display_w, display_h),
+    ))
+    return g
+
+
 def render_handwriting(
     drawing: svgwrite.Drawing,
     text: str,
@@ -97,19 +137,19 @@ def render_handwriting(
     width: float,
     height: float,
     font_path: Path | str | None = None,
+    font_size: int | None = None,
     color: tuple[int, int, int] = (20, 20, 20),
     rng: random.Random | None = None,
 ) -> svgwrite.container.Group:
     """Render handwriting text into an SVG group positioned at (x, y, width, height).
-
-    Renders via PIL with a handwriting font, then embeds the result as a
-    transparent PNG in the SVG.
 
     Args:
         drawing: The svgwrite.Drawing (used for creating elements).
         text: The text to render.
         x, y, width, height: The bounding box to place the text in.
         font_path: Specific font file to use, or None for random selection.
+        font_size: Fixed PIL font size for consistent text across fields.
+            If None, derived from box height.
         color: RGB tuple for text color.
         rng: Random instance for reproducibility.
 
@@ -124,30 +164,11 @@ def render_handwriting(
     else:
         font_path = Path(font_path)
 
-    # Render at high resolution then scale to fit the box
-    render_size = max(48, int(height * 2))
+    render_size = font_size if font_size is not None else max(48, int(height * 2))
     img = _render_text_to_png(text, font_path, render_size, color=color,
                               blur=0.6, rng=rng)
 
-    # Scale image to fit within the value box (maintain aspect ratio)
-    img_w, img_h = img.size
-    scale = min(width / img_w, height / img_h) * 0.9
-    display_w = img_w * scale
-    display_h = img_h * scale
-
-    # Center vertically, left-align with small offset
-    img_x = x + height * 0.05
-    img_y = y + (height - display_h) / 2
-
-    data_uri = _img_to_data_uri(img)
-
-    g = drawing.g()
-    g.add(drawing.image(
-        href=data_uri,
-        insert=(img_x, img_y),
-        size=(display_w, display_h),
-    ))
-    return g
+    return _place_image(drawing, img, x, y, width, height, font_size)
 
 
 def render_signature(
@@ -158,6 +179,7 @@ def render_signature(
     width: float,
     height: float,
     font_path: Path | str | None = None,
+    font_size: int | None = None,
     color: tuple[int, int, int] = (20, 20, 20),
     rng: random.Random | None = None,
 ) -> svgwrite.container.Group:
@@ -170,24 +192,8 @@ def render_signature(
     else:
         font_path = Path(font_path)
 
-    render_size = max(64, int(height * 2.5))
+    render_size = font_size if font_size is not None else max(64, int(height * 2.5))
     img = _render_text_to_png(text, font_path, render_size, color=color,
                               blur=0.8, rng=rng)
 
-    img_w, img_h = img.size
-    scale = min(width / img_w, height / img_h) * 0.85
-    display_w = img_w * scale
-    display_h = img_h * scale
-
-    img_x = x + height * 0.05
-    img_y = y + (height - display_h) / 2
-
-    data_uri = _img_to_data_uri(img)
-
-    g = drawing.g()
-    g.add(drawing.image(
-        href=data_uri,
-        insert=(img_x, img_y),
-        size=(display_w, display_h),
-    ))
-    return g
+    return _place_image(drawing, img, x, y, width, height, font_size)
