@@ -229,6 +229,44 @@ def add_background_to_drawing(
     ))
 
 
+def add_background_no_border(
+    drawing: svgwrite.Drawing,
+    params: BackgroundParams,
+) -> None:
+    """Add background layers WITHOUT border to an existing drawing.
+
+    For back sides of documents — just the background fill and a light
+    inner security pattern across the full page. No border mask, no frame.
+
+    Layers added (bottom to top):
+      1. Background color fill
+      2. Light security pattern (full page, low opacity)
+    """
+    rng = random.Random(params.seed)
+
+    # --- Layer 1: Background fill ---
+    drawing.add(drawing.rect(
+        insert=(0, 0),
+        size=(params.width, params.height),
+        fill=params.bg_color,
+    ))
+
+    # --- Layer 2: Light security pattern (full page, low opacity) ---
+    inner_cfg = random_full_page_config(
+        width=params.width,
+        height=params.height,
+        colors=params.inner_colors,
+        pattern_type=params.inner_pattern_type,
+        seed=rng.randint(0, 2**32),
+    )
+    inner_cfg.stroke_width *= 5.0
+    inner_elements = generate_pattern_elements(inner_cfg)
+
+    inner_g = drawing.g(opacity=params.inner_opacity)
+    _add_raw_elements(inner_g, inner_elements)
+    drawing.add(inner_g)
+
+
 def generate_background(params: BackgroundParams) -> svgwrite.Drawing:
     """Generate a full background document as an svgwrite.Drawing."""
     drawing = svgwrite.Drawing(

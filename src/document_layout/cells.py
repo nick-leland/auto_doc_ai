@@ -19,12 +19,18 @@ from typing import Literal
 # ---------------------------------------------------------------------------
 
 class BlockType(str, Enum):
+    # Front side
     HEADER = "header"
     VEHICLE_INFO = "vehicle_info"
     TITLE_META = "title_meta"
     OWNER = "owner"
     LIEN = "lien"
     LEGAL = "legal"
+    # Back side
+    BACK_WARNING = "back_warning"
+    TRANSFER = "transfer"
+    DEALER_REASSIGNMENT = "dealer_reassignment"
+    BACK_LEGAL = "back_legal"
 
 
 class FieldStyle(str, Enum):
@@ -73,6 +79,7 @@ class DocumentLayout:
     font_family: str = "Helvetica"
     font_size: float = 0.0  # solved by packing engine
     border_text: str = ""          # state identity text for the top border
+    side_border_text: str = ""     # void/fraud warning for the side borders
     bottom_border_text: str = ""   # void/legal text for the bottom border
 
 
@@ -490,16 +497,341 @@ def _legal_variants() -> list[BlockVariant]:
 
 
 # ---------------------------------------------------------------------------
+# Back side variants
+# ---------------------------------------------------------------------------
+
+def _back_warning_variants() -> list[BlockVariant]:
+    return [
+        BlockVariant(
+            block_type=BlockType.BACK_WARNING,
+            variant_id="back_warning_v1",
+            title=None,
+            title_style="none",
+            height_weight=0.6,
+            rows=[
+                RowDef([FieldDef("warning_text",
+                        "WARNING: FEDERAL AND STATE LAWS REQUIRE THAT YOU STATE THE MILEAGE IN CONNECTION "
+                        "WITH THE TRANSFER OF OWNERSHIP. FAILURE TO COMPLETE OR PROVIDING A FALSE STATEMENT "
+                        "MAY RESULT IN FINES AND/OR IMPRISONMENT.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.BACK_WARNING,
+            variant_id="back_warning_v2",
+            title=None,
+            title_style="none",
+            height_weight=0.6,
+            rows=[
+                RowDef([FieldDef("warning_text",
+                        "IMPORTANT: FEDERAL AND STATE LAW REQUIRES DISCLOSURE OF THE VEHICLE MILEAGE UPON "
+                        "TRANSFER OF OWNERSHIP. AN INACCURATE OR INCOMPLETE STATEMENT MAY SUBJECT YOU TO "
+                        "CRIMINAL AND/OR CIVIL PENALTIES.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.BACK_WARNING,
+            variant_id="back_warning_v3",
+            title=None,
+            title_style="none",
+            height_weight=0.5,
+            rows=[
+                RowDef([FieldDef("warning_text",
+                        "NOTICE: ODOMETER DISCLOSURE IS REQUIRED BY FEDERAL AND STATE LAW. "
+                        "FALSE STATEMENTS ARE PUNISHABLE BY FINE AND/OR IMPRISONMENT.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+    ]
+
+
+def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
+    """Transfer by owner section. Tag prefixes all field names."""
+    return [
+        BlockVariant(
+            block_type=BlockType.TRANSFER,
+            variant_id=f"{tag}_v1",
+            title="TRANSFER BY OWNER",
+            title_style="banner",
+            height_weight=3.5,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "The undersigned hereby assign and warrant title of this vehicle, subject to the liens "
+                        "described on the face of this certificate, to:",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_buyer_name", "BUYER(S) NAME")]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS", height_lines=2)]),
+                RowDef([
+                    FieldDef(f"{tag}_new_lien", "LIENHOLDER (if none, state none)", col_span=0.6),
+                    FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS")]),
+                RowDef([FieldDef(f"{tag}_odom_label",
+                        "ODOMETER DISCLOSURE STATEMENT",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odometer", "I state that the odometer now reads (NO TENTHS) miles:")]),
+                RowDef([FieldDef(f"{tag}_odom_check1",
+                        "[ ] Mileage is in excess of its mechanical limits.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_check2",
+                        "[ ] Odometer reading is NOT the actual mileage. WARNING — ODOMETER DISCREPANCY.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_sig", "SIGNATURE(S) OF SELLER(S)", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_buyer_sig", "SIGNATURE(S) OF BUYER(S)", col_span=0.5, field_type="signature"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_print", "HAND PRINT NAME OF SELLER(S)", col_span=0.5),
+                    FieldDef(f"{tag}_buyer_print", "HAND PRINT NAME OF BUYER(S)", col_span=0.5),
+                ]),
+                RowDef([FieldDef(f"{tag}_date", "DATE", field_type="date")]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.TRANSFER,
+            variant_id=f"{tag}_v2",
+            title="ASSIGNMENT OF TITLE BY OWNER",
+            title_style="left",
+            height_weight=3.5,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "I/We hereby assign, transfer, and warrant title to the vehicle described on the face "
+                        "of this certificate to the following purchaser(s):",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_buyer_name", "NAME OF BUYER(S)", col_span=0.6),
+                    FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS", height_lines=2)]),
+                RowDef([
+                    FieldDef(f"{tag}_new_lien", "NEW LIENHOLDER", col_span=0.5),
+                    FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS", col_span=0.5),
+                ]),
+                RowDef([FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", field_type="date")]),
+                RowDef([FieldDef(f"{tag}_odom_label",
+                        "ODOMETER DISCLOSURE — I state that the odometer now reads:",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odometer", "MILES (NO TENTHS)")]),
+                RowDef([FieldDef(f"{tag}_odom_check1",
+                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_sig", "SELLER SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_buyer_sig", "BUYER SIGNATURE", col_span=0.5, field_type="signature"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_print", "SELLER PRINTED NAME", col_span=0.5),
+                    FieldDef(f"{tag}_buyer_print", "BUYER PRINTED NAME", col_span=0.5),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.TRANSFER,
+            variant_id=f"{tag}_v3",
+            title="TRANSFER OF OWNERSHIP",
+            title_style="center",
+            height_weight=3.5,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "The undersigned seller(s) certify that the described vehicle is transferred to the "
+                        "buyer(s) named below, subject to any liens noted herein.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_buyer_name", "PURCHASER(S) NAME (PLEASE PRINT)")]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "PURCHASER ADDRESS", height_lines=2)]),
+                RowDef([
+                    FieldDef(f"{tag}_new_lien", "LIENHOLDER (IF NONE, STATE NONE)", col_span=0.6),
+                    FieldDef(f"{tag}_new_lien_date", "LIEN DATE", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS")]),
+                RowDef([FieldDef(f"{tag}_odom_label",
+                        "ODOMETER DISCLOSURE STATEMENT",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odometer",
+                        "THE ODOMETER NOW READS (NO TENTHS) MILES")]),
+                RowDef([FieldDef(f"{tag}_odom_check1",
+                        "[ ] Mileage in excess of mechanical limits  [ ] Odometer reading is not actual mileage",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_sig", "SIGNATURE OF SELLER(S)", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_date", "DATE", col_span=0.5, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_buyer_sig", "SIGNATURE OF BUYER(S)", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_buyer_print", "PRINT BUYER NAME", col_span=0.5),
+                ]),
+                RowDef([FieldDef(f"{tag}_seller_print", "PRINT SELLER NAME")]),
+            ],
+        ),
+    ]
+
+
+def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
+    """Dealer reassignment section. Ordinal is FIRST or SECOND."""
+    tag = f"dealer_{ordinal.lower()}"
+    return [
+        BlockVariant(
+            block_type=BlockType.DEALER_REASSIGNMENT,
+            variant_id=f"{tag}_v1",
+            title=f"{ordinal} REASSIGNMENT BY A LICENSED DEALER",
+            title_style="banner",
+            height_weight=4.0,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "The undersigned dealer hereby assigns and warrants title of this vehicle to:",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_buyer_name", "BUYER(S) NAME")]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS", height_lines=2)]),
+                RowDef([
+                    FieldDef(f"{tag}_new_lien", "LIENHOLDER (if none, state none)", col_span=0.6),
+                    FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS")]),
+                RowDef([FieldDef(f"{tag}_odom_label",
+                        "ODOMETER DISCLOSURE STATEMENT",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odometer", "I state that the odometer now reads (NO TENTHS) miles:")]),
+                RowDef([FieldDef(f"{tag}_odom_check1",
+                        "[ ] Mileage is in excess of its mechanical limits.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_check2",
+                        "[ ] Odometer reading is NOT the actual mileage. WARNING — ODOMETER DISCREPANCY.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_cert",
+                        "WE, THE BUYER AND SELLER, HEREBY CERTIFY THAT WE HAVE BOTH VIEWED THE ODOMETER.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_dealer_name", "NAME OF DEALERSHIP", col_span=0.6),
+                    FieldDef(f"{tag}_dealer_license", "DEALER LICENSE NO.", col_span=0.4),
+                ]),
+                RowDef([FieldDef(f"{tag}_dealer_address", "DEALER ADDRESS")]),
+                RowDef([
+                    FieldDef(f"{tag}_dealer_city", "CITY", col_span=0.5),
+                    FieldDef(f"{tag}_dealer_state", "STATE", col_span=0.2),
+                    FieldDef(f"{tag}_date", "DATE", col_span=0.3, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_agent_sig", "SIGNATURE OF AUTHORIZED AGENT", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_buyer_sig", "SIGNATURE OF BUYER(S)", col_span=0.5, field_type="signature"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_agent_print", "PRINT NAME OF AUTHORIZED AGENT", col_span=0.5),
+                    FieldDef(f"{tag}_buyer_print", "PRINT NAME OF BUYER(S)", col_span=0.5),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.DEALER_REASSIGNMENT,
+            variant_id=f"{tag}_v2",
+            title=f"{ordinal} DEALER REASSIGNMENT",
+            title_style="left",
+            height_weight=4.0,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "The undersigned licensed dealer assigns and warrants title to the purchaser(s) below.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_buyer_name", "BUYER NAME", col_span=0.6),
+                    FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS", height_lines=2)]),
+                RowDef([
+                    FieldDef(f"{tag}_new_lien", "NEW LIENHOLDER", col_span=0.5),
+                    FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS", col_span=0.5),
+                ]),
+                RowDef([FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", field_type="date")]),
+                RowDef([FieldDef(f"{tag}_odom_label",
+                        "ODOMETER DISCLOSURE — The odometer now reads:",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odometer", "MILES (NO TENTHS)")]),
+                RowDef([FieldDef(f"{tag}_odom_check1",
+                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_cert",
+                        "BUYER AND SELLER CERTIFY THEY HAVE BOTH VIEWED THE ODOMETER.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_dealer_name", "DEALERSHIP", col_span=0.5),
+                    FieldDef(f"{tag}_dealer_license", "LICENSE NO.", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_dealer_address", "ADDRESS", col_span=0.4),
+                    FieldDef(f"{tag}_dealer_city", "CITY", col_span=0.3),
+                    FieldDef(f"{tag}_dealer_state", "STATE", col_span=0.3),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_agent_sig", "AUTHORIZED AGENT SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_buyer_sig", "BUYER SIGNATURE", col_span=0.5, field_type="signature"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_agent_print", "AGENT PRINTED NAME", col_span=0.5),
+                    FieldDef(f"{tag}_buyer_print", "BUYER PRINTED NAME", col_span=0.5),
+                ]),
+            ],
+        ),
+    ]
+
+
+def _back_legal_variants() -> list[BlockVariant]:
+    return [
+        BlockVariant(
+            block_type=BlockType.BACK_LEGAL,
+            variant_id="back_legal_v1",
+            title=None,
+            title_style="none",
+            height_weight=0.4,
+            rows=[
+                RowDef([FieldDef("back_legal_text",
+                        "ANY FALSE STATEMENT MAY BE PUNISHABLE AS A MISDEMEANOR OR FELONY. "
+                        "ANY CHANGE OR ERASURE WILL VOID THIS TITLE.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.BACK_LEGAL,
+            variant_id="back_legal_v2",
+            title=None,
+            title_style="none",
+            height_weight=0.4,
+            rows=[
+                RowDef([FieldDef("back_legal_text",
+                        "WARNING: ANY ALTERATION, FORGERY, OR FALSE STATEMENT ON THIS DOCUMENT "
+                        "IS A VIOLATION OF LAW AND MAY BE SUBJECT TO CRIMINAL PROSECUTION.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.BACK_LEGAL,
+            variant_id="back_legal_v3",
+            title=None,
+            title_style="none",
+            height_weight=0.3,
+            rows=[
+                RowDef([FieldDef("back_legal_text",
+                        "FALSE STATEMENTS ARE PUNISHABLE BY LAW. THIS TITLE IS VOID IF ALTERED OR ERASED.",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Complete variant pool
 # ---------------------------------------------------------------------------
 
 VARIANT_POOL: dict[BlockType, list[BlockVariant]] = {
+    # Front
     BlockType.HEADER: _header_variants(),
     BlockType.VEHICLE_INFO: _vehicle_info_variants(),
     BlockType.TITLE_META: _title_meta_variants(),
     BlockType.OWNER: _owner_variants(),
     BlockType.LIEN: [],  # built dynamically with ordinal
     BlockType.LEGAL: _legal_variants(),
+    # Back
+    BlockType.BACK_WARNING: _back_warning_variants(),
+    BlockType.TRANSFER: [],  # built dynamically with tag
+    BlockType.DEALER_REASSIGNMENT: [],  # built dynamically with ordinal
+    BlockType.BACK_LEGAL: _back_legal_variants(),
 }
 
 
@@ -516,6 +848,15 @@ FRONT_BLOCK_ORDER: list[BlockType] = [
     BlockType.LIEN,     # first lien
     BlockType.LIEN,     # second lien (may be omitted)
     BlockType.LEGAL,
+]
+
+# Back side block order
+BACK_BLOCK_ORDER: list[BlockType] = [
+    BlockType.BACK_WARNING,
+    BlockType.TRANSFER,
+    BlockType.DEALER_REASSIGNMENT,   # first dealer reassignment
+    BlockType.DEALER_REASSIGNMENT,   # second dealer reassignment
+    BlockType.BACK_LEGAL,
 ]
 
 
@@ -540,8 +881,9 @@ def build_random_layout(
     border_text_str = border_template.replace("{STATE_NAME}", state_name.upper())
     doc_title = rng.choice(DOCUMENT_TITLES)
 
-    # Pick bottom border text (void/legal message)
-    from src.data.static import BOTTOM_TEXT
+    # Pick side and bottom border text (void/fraud warnings)
+    from src.data.static import SIDE_TEXT, BOTTOM_TEXT
+    side_border_str = rng.choice(SIDE_TEXT)
     bottom_border_str = rng.choice(BOTTOM_TEXT)
 
     blocks: list[BlockVariant] = []
@@ -580,7 +922,59 @@ def build_random_layout(
         blocks=blocks,
         font_family=font_family,
         border_text=border_text_str,
+        side_border_text=side_border_str,
         bottom_border_text=bottom_border_str,
+    )
+
+
+def build_random_back_layout(
+    state_name: str = "SAMPLE STATE",
+    rng: random.Random | None = None,
+) -> DocumentLayout:
+    """Pick one variant per back-side block type and assemble a layout.
+
+    The back side has NO border — just a light background pattern.
+    Returns a DocumentLayout with border_text="" and bottom_border_text="".
+    """
+    if rng is None:
+        rng = random.Random()
+
+    font_family = rng.choice(FONT_FAMILIES)
+
+    blocks: list[BlockVariant] = []
+
+    # Dealer reassignment ordinals
+    dealer_ordinals = ["FIRST", "SECOND"]
+    # Pick one dealer style index for consistency
+    dealer_style_idx = rng.randint(0, 1)
+
+    dealer_variants_by_ordinal: dict[str, BlockVariant] = {}
+    for ordinal in dealer_ordinals:
+        variants = _dealer_reassignment_variants(ordinal)
+        idx = min(dealer_style_idx, len(variants) - 1)
+        dealer_variants_by_ordinal[ordinal] = variants[idx]
+
+    dealer_counter = 0
+    for block_type in BACK_BLOCK_ORDER:
+        if block_type == BlockType.DEALER_REASSIGNMENT:
+            ordinal = dealer_ordinals[dealer_counter]
+            variant = dealer_variants_by_ordinal[ordinal]
+            dealer_counter += 1
+        elif block_type == BlockType.TRANSFER:
+            variants = _transfer_variants("transfer")
+            variant = rng.choice(variants)
+        else:
+            pool = VARIANT_POOL[block_type]
+            variant = rng.choice(pool)
+
+        variant = _copy_variant(variant, state_name)
+        blocks.append(variant)
+
+    return DocumentLayout(
+        blocks=blocks,
+        font_family=font_family,
+        border_text="",
+        bottom_border_text="",
     )
 
 

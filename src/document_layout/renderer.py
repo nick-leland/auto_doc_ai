@@ -357,6 +357,12 @@ HANDWRITING_FIELDS = {"signature"}
 # Fields rendered with handwriting style (by field name patterns)
 HANDWRITING_NAME_PATTERNS = {"_release_sig", "_release_title", "_release_date"}
 
+# Back-side fields that are handwritten (signatures, printed names)
+BACK_HANDWRITING_PATTERNS = {
+    "_seller_sig", "_buyer_sig", "_seller_print", "_buyer_print",
+    "_agent_sig", "_agent_print",
+}
+
 
 def _is_handwriting_field(field_name: str, field_type: str) -> bool:
     """Determine if a field should be rendered with handwriting."""
@@ -365,19 +371,37 @@ def _is_handwriting_field(field_name: str, field_type: str) -> bool:
     for pattern in HANDWRITING_NAME_PATTERNS:
         if pattern in field_name:
             return True
+    for pattern in BACK_HANDWRITING_PATTERNS:
+        if pattern in field_name:
+            return True
     return False
 
 
 def _get_handwriting_group(field_name: str) -> str:
     """Determine which 'person' is writing this field.
 
-    Fields from the same lien release are written by the same person,
-    so they share a handwriting font. Different liens = different people.
+    Fields from the same lien release or transaction section are written
+    by the same person, so they share a handwriting font.
     """
+    # Front: lien releases
     if field_name.startswith("first_"):
-        return "first"
+        return "first_lien"
     elif field_name.startswith("second_"):
-        return "second"
+        return "second_lien"
+    # Back: transfer by owner — seller and buyer are different people
+    elif field_name.startswith("transfer_seller"):
+        return "transfer_seller"
+    elif field_name.startswith("transfer_buyer"):
+        return "transfer_buyer"
+    # Back: dealer reassignment — each dealer section has agent + buyer
+    elif field_name.startswith("dealer_first_agent"):
+        return "dealer_first_agent"
+    elif field_name.startswith("dealer_first_buyer"):
+        return "dealer_first_buyer"
+    elif field_name.startswith("dealer_second_agent"):
+        return "dealer_second_agent"
+    elif field_name.startswith("dealer_second_buyer"):
+        return "dealer_second_buyer"
     return "default"
 
 
@@ -446,8 +470,10 @@ def fill_values(
     if fillable_heights:
         fillable_heights.sort()
         median_h = fillable_heights[len(fillable_heights) // 2]
-        machine_font_size = max(48, int(median_h * 1.5))
-        handwriting_font_size = max(48, int(median_h * 1.8))
+        # Render size in PIL pixels — scaled down by 0.5 for SVG placement.
+        # No hard floor: small docs get proportionally smaller text.
+        machine_font_size = max(16, int(median_h * 1.5))
+        handwriting_font_size = max(16, int(median_h * 1.8))
     else:
         machine_font_size = 72
         handwriting_font_size = 80
