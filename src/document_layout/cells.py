@@ -30,6 +30,8 @@ class BlockType(str, Enum):
     BACK_WARNING = "back_warning"
     TRANSFER = "transfer"
     DEALER_REASSIGNMENT = "dealer_reassignment"
+    NOTARY = "notary"
+    DAMAGE_DISCLOSURE = "damage_disclosure"
     BACK_LEGAL = "back_legal"
 
 
@@ -160,19 +162,21 @@ def _vehicle_info_variants() -> list[BlockVariant]:
             variant_id="vehicle_info_v1",
             title="VEHICLE DESCRIPTION",
             title_style="left",
-            height_weight=1.5,
+            height_weight=1.8,
             rows=[
                 RowDef([FieldDef("vin", "VEHICLE IDENTIFICATION NO.")]),
                 RowDef([
-                    FieldDef("year", "YEAR", col_span=0.2),
-                    FieldDef("make", "MAKE", col_span=0.3),
-                    FieldDef("model", "MODEL", col_span=0.3),
-                    FieldDef("body", "BODY TYPE", col_span=0.2),
+                    FieldDef("year", "YEAR", col_span=0.15),
+                    FieldDef("make", "MAKE", col_span=0.25),
+                    FieldDef("model", "MODEL", col_span=0.25),
+                    FieldDef("body", "BODY TYPE", col_span=0.15),
+                    FieldDef("color", "COLOR", col_span=0.2),
                 ]),
                 RowDef([
-                    FieldDef("weight", "WEIGHT", col_span=0.33),
-                    FieldDef("cylinders", "CYL", col_span=0.33),
-                    FieldDef("fuel", "FUEL", col_span=0.34),
+                    FieldDef("weight", "WEIGHT", col_span=0.25),
+                    FieldDef("cylinders", "CYL", col_span=0.25),
+                    FieldDef("fuel", "FUEL", col_span=0.25),
+                    FieldDef("plate_no", "PLATE NO.", col_span=0.25),
                 ]),
             ],
         ),
@@ -188,14 +192,15 @@ def _vehicle_info_variants() -> list[BlockVariant]:
                     FieldDef("year", "YEAR", col_span=0.4),
                 ]),
                 RowDef([
-                    FieldDef("make", "MAKE", col_span=0.5),
-                    FieldDef("model", "MODEL", col_span=0.5),
+                    FieldDef("make", "MAKE", col_span=0.35),
+                    FieldDef("model", "MODEL", col_span=0.35),
+                    FieldDef("color", "MAJOR COLOR", col_span=0.3),
                 ]),
                 RowDef([
                     FieldDef("body", "BODY STYLE", col_span=0.25),
                     FieldDef("weight", "GVW", col_span=0.25),
                     FieldDef("cylinders", "CYL", col_span=0.25),
-                    FieldDef("color", "COLOR", col_span=0.25),
+                    FieldDef("plate_no", "LICENSE PLATE", col_span=0.25),
                 ]),
             ],
         ),
@@ -204,16 +209,22 @@ def _vehicle_info_variants() -> list[BlockVariant]:
             variant_id="vehicle_info_v3",
             title="VEHICLE INFORMATION",
             title_style="left",
-            height_weight=1.2,
+            height_weight=1.5,
             rows=[
                 RowDef([FieldDef("vin", "VEHICLE IDENTIFICATION NUMBER")]),
                 RowDef([
-                    FieldDef("year", "YR", col_span=0.12),
-                    FieldDef("make", "MAKE", col_span=0.23),
-                    FieldDef("model", "MODEL", col_span=0.23),
-                    FieldDef("body", "BODY", col_span=0.14),
-                    FieldDef("weight", "WT", col_span=0.14),
-                    FieldDef("cylinders", "CYL", col_span=0.14),
+                    FieldDef("year", "YR", col_span=0.1),
+                    FieldDef("make", "MAKE", col_span=0.2),
+                    FieldDef("model", "MODEL", col_span=0.2),
+                    FieldDef("body", "BODY", col_span=0.12),
+                    FieldDef("color", "COLOR", col_span=0.12),
+                    FieldDef("weight", "WT", col_span=0.12),
+                    FieldDef("cylinders", "CYL", col_span=0.12),
+                ]),
+                RowDef([
+                    FieldDef("fuel", "FUEL TYPE", col_span=0.33),
+                    FieldDef("plate_no", "PLATE NUMBER", col_span=0.33),
+                    FieldDef("prev_title_state", "PREVIOUS TITLE STATE", col_span=0.34),
                 ]),
             ],
         ),
@@ -222,21 +233,23 @@ def _vehicle_info_variants() -> list[BlockVariant]:
             variant_id="vehicle_info_v4",
             title="MOTOR VEHICLE DESCRIPTION",
             title_style="banner",
-            height_weight=1.8,
+            height_weight=2.0,
             rows=[
                 RowDef([FieldDef("vin", "VEHICLE IDENTIFICATION NUMBER")]),
                 RowDef([
-                    FieldDef("year", "YEAR OF MANUFACTURE", col_span=0.5),
-                    FieldDef("make", "MANUFACTURER", col_span=0.5),
+                    FieldDef("year", "YEAR OF MANUFACTURE", col_span=0.35),
+                    FieldDef("make", "MANUFACTURER", col_span=0.35),
+                    FieldDef("color", "COLOR", col_span=0.3),
                 ]),
                 RowDef([
                     FieldDef("model", "MODEL / SERIES", col_span=0.5),
                     FieldDef("body", "BODY TYPE / STYLE", col_span=0.5),
                 ]),
                 RowDef([
-                    FieldDef("weight", "GROSS VEHICLE WEIGHT", col_span=0.33),
-                    FieldDef("cylinders", "NO. OF CYLINDERS", col_span=0.33),
-                    FieldDef("fuel", "FUEL TYPE", col_span=0.34),
+                    FieldDef("weight", "GROSS VEHICLE WEIGHT", col_span=0.25),
+                    FieldDef("cylinders", "NO. OF CYLINDERS", col_span=0.25),
+                    FieldDef("fuel", "FUEL TYPE", col_span=0.25),
+                    FieldDef("plate_no", "LICENSE PLATE NO.", col_span=0.25),
                 ]),
             ],
         ),
@@ -250,12 +263,17 @@ def _title_meta_variants() -> list[BlockVariant]:
             variant_id="title_meta_v1",
             title=None,
             title_style="none",
-            height_weight=0.7,
+            height_weight=1.0,
             rows=[
                 RowDef([
-                    FieldDef("title_no", "TITLE NO.", col_span=0.33),
-                    FieldDef("date_issued", "DATE ISSUED", col_span=0.33, field_type="date"),
-                    FieldDef("date_first_sold", "DATE FIRST SOLD", col_span=0.34, field_type="date"),
+                    FieldDef("title_no", "TITLE NO.", col_span=0.25),
+                    FieldDef("title_type", "TITLE TYPE", col_span=0.25),
+                    FieldDef("date_issued", "DATE ISSUED", col_span=0.25, field_type="date"),
+                    FieldDef("date_first_sold", "DATE FIRST SOLD", col_span=0.25, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef("title_brand", "BRANDS / REMARKS", col_span=0.5),
+                    FieldDef("county", "COUNTY", col_span=0.5),
                 ]),
             ],
         ),
@@ -264,15 +282,20 @@ def _title_meta_variants() -> list[BlockVariant]:
             variant_id="title_meta_v2",
             title=None,
             title_style="none",
-            height_weight=1.0,
+            height_weight=1.3,
             rows=[
                 RowDef([
-                    FieldDef("title_no", "TITLE SEQUENCE NUMBER", col_span=0.5),
-                    FieldDef("date_issued", "ISSUE DATE", col_span=0.5, field_type="date"),
+                    FieldDef("title_no", "TITLE SEQUENCE NUMBER", col_span=0.4),
+                    FieldDef("title_type", "TYPE", col_span=0.2),
+                    FieldDef("date_issued", "ISSUE DATE", col_span=0.4, field_type="date"),
                 ]),
                 RowDef([
                     FieldDef("date_first_sold", "IF NEW, DATE FIRST SOLD", col_span=0.5, field_type="date"),
                     FieldDef("odometer", "ODOMETER READING", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef("title_brand", "TITLE BRAND / STATUS", col_span=0.5),
+                    FieldDef("prev_title_no", "PREVIOUS TITLE NO.", col_span=0.5),
                 ]),
             ],
         ),
@@ -281,13 +304,33 @@ def _title_meta_variants() -> list[BlockVariant]:
             variant_id="title_meta_v3",
             title=None,
             title_style="none",
-            height_weight=0.6,
+            height_weight=0.7,
             rows=[
                 RowDef([
-                    FieldDef("title_no", "TITLE NO.", col_span=0.25),
-                    FieldDef("date_issued", "ISSUED", col_span=0.25, field_type="date"),
-                    FieldDef("date_first_sold", "FIRST SOLD", col_span=0.25, field_type="date"),
+                    FieldDef("title_no", "TITLE NO.", col_span=0.2),
+                    FieldDef("title_type", "TYPE", col_span=0.15),
+                    FieldDef("date_issued", "ISSUED", col_span=0.2, field_type="date"),
+                    FieldDef("date_first_sold", "FIRST SOLD", col_span=0.2, field_type="date"),
                     FieldDef("odometer", "ODOMETER", col_span=0.25),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.TITLE_META,
+            variant_id="title_meta_v4",
+            title=None,
+            title_style="none",
+            height_weight=1.0,
+            rows=[
+                RowDef([
+                    FieldDef("title_no", "DOCUMENT NUMBER", col_span=0.35),
+                    FieldDef("date_issued", "DATE ISSUED", col_span=0.35, field_type="date"),
+                    FieldDef("county", "COUNTY OF ISSUANCE", col_span=0.3),
+                ]),
+                RowDef([
+                    FieldDef("title_type", "TITLE TYPE", col_span=0.25),
+                    FieldDef("title_brand", "REMARKS", col_span=0.4),
+                    FieldDef("odometer", "ODOMETER", col_span=0.35),
                 ]),
             ],
         ),
@@ -301,10 +344,13 @@ def _owner_variants() -> list[BlockVariant]:
             variant_id="owner_v1",
             title="OWNER(S)",
             title_style="left",
-            height_weight=1.5,
+            height_weight=1.8,
             rows=[
                 RowDef([FieldDef("owner_name_1", "NAME")]),
-                RowDef([FieldDef("owner_name_2", "AND / OR")]),
+                RowDef([
+                    FieldDef("owner_name_2", "AND / OR", col_span=0.7),
+                    FieldDef("ownership_type", "OWNERSHIP", col_span=0.3),
+                ]),
                 RowDef([FieldDef("owner_address", "ADDRESS", height_lines=2)]),
             ],
         ),
@@ -313,12 +359,13 @@ def _owner_variants() -> list[BlockVariant]:
             variant_id="owner_v2",
             title="REGISTERED OWNER",
             title_style="center",
-            height_weight=1.8,
+            height_weight=2.1,
             rows=[
                 RowDef([
-                    FieldDef("owner_first", "FIRST NAME", col_span=0.4),
+                    FieldDef("owner_first", "FIRST NAME", col_span=0.35),
                     FieldDef("owner_mi", "MI", col_span=0.1),
-                    FieldDef("owner_last", "LAST NAME", col_span=0.5),
+                    FieldDef("owner_last", "LAST NAME", col_span=0.35),
+                    FieldDef("owner_dl", "DL / ID NO.", col_span=0.2),
                 ]),
                 RowDef([FieldDef("owner_street", "STREET ADDRESS")]),
                 RowDef([
@@ -333,10 +380,14 @@ def _owner_variants() -> list[BlockVariant]:
             variant_id="owner_v3",
             title="VEHICLE OWNER(S)",
             title_style="left",
-            height_weight=1.3,
+            height_weight=1.8,
             rows=[
-                RowDef([FieldDef("owner_name", "OWNER NAME(S)")]),
+                RowDef([
+                    FieldDef("owner_name", "OWNER NAME(S)", col_span=0.7),
+                    FieldDef("ownership_type", "[ ] AND  [ ] OR  [ ] JTWROS", col_span=0.3),
+                ]),
                 RowDef([FieldDef("owner_address", "MAILING ADDRESS", height_lines=2)]),
+                RowDef([FieldDef("owner_tod", "TRANSFER ON DEATH BENEFICIARY (if applicable)")]),
             ],
         ),
         BlockVariant(
@@ -344,15 +395,17 @@ def _owner_variants() -> list[BlockVariant]:
             variant_id="owner_v4",
             title="TITLED OWNER",
             title_style="banner",
-            height_weight=1.6,
+            height_weight=2.0,
             rows=[
                 RowDef([
-                    FieldDef("owner_last", "LAST NAME / BUSINESS NAME", col_span=0.6),
-                    FieldDef("owner_first", "FIRST NAME", col_span=0.4),
+                    FieldDef("owner_last", "LAST NAME / BUSINESS NAME", col_span=0.5),
+                    FieldDef("owner_first", "FIRST NAME", col_span=0.3),
+                    FieldDef("owner_dl", "DL / ID NO.", col_span=0.2),
                 ]),
                 RowDef([
-                    FieldDef("owner_last_2", "CO-OWNER LAST NAME", col_span=0.6),
-                    FieldDef("owner_first_2", "CO-OWNER FIRST NAME", col_span=0.4),
+                    FieldDef("owner_last_2", "CO-OWNER LAST NAME", col_span=0.4),
+                    FieldDef("owner_first_2", "CO-OWNER FIRST NAME", col_span=0.3),
+                    FieldDef("ownership_type", "OWNERSHIP TYPE", col_span=0.3),
                 ]),
                 RowDef([FieldDef("owner_address", "ADDRESS")]),
                 RowDef([
@@ -360,6 +413,28 @@ def _owner_variants() -> list[BlockVariant]:
                     FieldDef("owner_state", "STATE", col_span=0.15),
                     FieldDef("owner_zip", "ZIP", col_span=0.35),
                 ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.OWNER,
+            variant_id="owner_v5",
+            title="OWNER INFORMATION",
+            title_style="left",
+            height_weight=2.2,
+            rows=[
+                RowDef([
+                    FieldDef("owner_name_1", "OWNER NAME", col_span=0.6),
+                    FieldDef("owner_dl", "DRIVER LICENSE NO.", col_span=0.4),
+                ]),
+                RowDef([
+                    FieldDef("owner_name_2", "CO-OWNER NAME", col_span=0.6),
+                    FieldDef("owner_dl_2", "CO-OWNER DL NO.", col_span=0.4),
+                ]),
+                RowDef([
+                    FieldDef("ownership_type", "OWNERSHIP (AND/OR/JTWROS)", col_span=0.5),
+                    FieldDef("owner_tod", "TOD BENEFICIARY", col_span=0.5),
+                ]),
+                RowDef([FieldDef("owner_address", "MAILING ADDRESS", height_lines=2)]),
             ],
         ),
     ]
@@ -554,7 +629,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
             variant_id=f"{tag}_v1",
             title="TRANSFER BY OWNER",
             title_style="banner",
-            height_weight=3.5,
+            height_weight=4.0,
             rows=[
                 RowDef([FieldDef(f"{tag}_preamble",
                         "The undersigned hereby assign and warrant title of this vehicle, subject to the liens "
@@ -577,6 +652,9 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                 RowDef([FieldDef(f"{tag}_odom_check2",
                         "[ ] Odometer reading is NOT the actual mileage. WARNING — ODOMETER DISCREPANCY.",
                         style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_exempt",
+                        "[ ] EXEMPT — Vehicle is 20 model years or older and not required to have odometer disclosure.",
+                        style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
                     FieldDef(f"{tag}_seller_sig", "SIGNATURE(S) OF SELLER(S)", col_span=0.5, field_type="signature"),
                     FieldDef(f"{tag}_buyer_sig", "SIGNATURE(S) OF BUYER(S)", col_span=0.5, field_type="signature"),
@@ -585,7 +663,14 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                     FieldDef(f"{tag}_seller_print", "HAND PRINT NAME OF SELLER(S)", col_span=0.5),
                     FieldDef(f"{tag}_buyer_print", "HAND PRINT NAME OF BUYER(S)", col_span=0.5),
                 ]),
-                RowDef([FieldDef(f"{tag}_date", "DATE", field_type="date")]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_dl", "SELLER DL / ID NO.", col_span=0.5),
+                    FieldDef(f"{tag}_buyer_dl", "BUYER DL / ID NO.", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_date", "DATE", col_span=0.5, field_type="date"),
+                    FieldDef(f"{tag}_sale_price", "PURCHASE PRICE $", col_span=0.5),
+                ]),
             ],
         ),
         BlockVariant(
@@ -600,8 +685,9 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                         "of this certificate to the following purchaser(s):",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
-                    FieldDef(f"{tag}_buyer_name", "NAME OF BUYER(S)", col_span=0.6),
-                    FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.4, field_type="date"),
+                    FieldDef(f"{tag}_buyer_name", "NAME OF BUYER(S)", col_span=0.4),
+                    FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.3, field_type="date"),
+                    FieldDef(f"{tag}_sale_price", "SALE PRICE $", col_span=0.3),
                 ]),
                 RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS", height_lines=2)]),
                 RowDef([
@@ -614,7 +700,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_odometer", "MILES (NO TENTHS)")]),
                 RowDef([FieldDef(f"{tag}_odom_check1",
-                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY",
+                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY  [ ] EXEMPT",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
                     FieldDef(f"{tag}_seller_sig", "SELLER SIGNATURE", col_span=0.5, field_type="signature"),
@@ -650,7 +736,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                 RowDef([FieldDef(f"{tag}_odometer",
                         "THE ODOMETER NOW READS (NO TENTHS) MILES")]),
                 RowDef([FieldDef(f"{tag}_odom_check1",
-                        "[ ] Mileage in excess of mechanical limits  [ ] Odometer reading is not actual mileage",
+                        "[ ] Mileage in excess of mechanical limits  [ ] Odometer reading is not actual mileage  [ ] Exempt",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
                     FieldDef(f"{tag}_seller_sig", "SIGNATURE OF SELLER(S)", col_span=0.5, field_type="signature"),
@@ -660,7 +746,11 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                     FieldDef(f"{tag}_buyer_sig", "SIGNATURE OF BUYER(S)", col_span=0.5, field_type="signature"),
                     FieldDef(f"{tag}_buyer_print", "PRINT BUYER NAME", col_span=0.5),
                 ]),
-                RowDef([FieldDef(f"{tag}_seller_print", "PRINT SELLER NAME")]),
+                RowDef([
+                    FieldDef(f"{tag}_seller_print", "PRINT SELLER NAME", col_span=0.35),
+                    FieldDef(f"{tag}_seller_dl", "SELLER DL NO.", col_span=0.3),
+                    FieldDef(f"{tag}_sale_price", "PURCHASE PRICE $", col_span=0.35),
+                ]),
             ],
         ),
     ]
@@ -696,6 +786,9 @@ def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_odom_check2",
                         "[ ] Odometer reading is NOT the actual mileage. WARNING — ODOMETER DISCREPANCY.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_odom_exempt",
+                        "[ ] EXEMPT — Vehicle is 20 model years or older and not required to have odometer disclosure.",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_odom_cert",
                         "WE, THE BUYER AND SELLER, HEREBY CERTIFY THAT WE HAVE BOTH VIEWED THE ODOMETER.",
@@ -745,7 +838,7 @@ def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_odometer", "MILES (NO TENTHS)")]),
                 RowDef([FieldDef(f"{tag}_odom_check1",
-                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY",
+                        "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY  [ ] EXEMPT",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_odom_cert",
                         "BUYER AND SELLER CERTIFY THEY HAVE BOTH VIEWED THE ODOMETER.",
@@ -766,6 +859,108 @@ def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
                 RowDef([
                     FieldDef(f"{tag}_agent_print", "AGENT PRINTED NAME", col_span=0.5),
                     FieldDef(f"{tag}_buyer_print", "BUYER PRINTED NAME", col_span=0.5),
+                ]),
+            ],
+        ),
+    ]
+
+
+def _notary_variants(tag: str = "notary") -> list[BlockVariant]:
+    """Notary acknowledgment block. Required in ~15+ states for title transfers."""
+    return [
+        BlockVariant(
+            block_type=BlockType.NOTARY,
+            variant_id=f"{tag}_v1",
+            title="NOTARY ACKNOWLEDGMENT",
+            title_style="left",
+            height_weight=2.0,
+            rows=[
+                RowDef([FieldDef(f"{tag}_preamble",
+                        "STATE OF __________ COUNTY OF __________",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_body",
+                        "On this date, before me, the undersigned notary public, personally appeared the above-named "
+                        "person(s), known to me (or proved on the basis of satisfactory evidence) to be the person(s) "
+                        "whose name(s) is/are subscribed to the within instrument.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_sig", "NOTARY SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_date", "DATE", col_span=0.5, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_name", "NOTARY PRINTED NAME", col_span=0.5),
+                    FieldDef(f"{tag}_commission_exp", "COMMISSION EXPIRES", col_span=0.5, field_type="date"),
+                ]),
+                RowDef([FieldDef(f"{tag}_seal_area",
+                        "[NOTARY SEAL / STAMP]",
+                        style=FieldStyle.LABEL_ONLY)]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.NOTARY,
+            variant_id=f"{tag}_v2",
+            title="NOTARIZATION",
+            title_style="banner",
+            height_weight=1.8,
+            rows=[
+                RowDef([FieldDef(f"{tag}_body",
+                        "Subscribed and sworn to (or affirmed) before me on this date by the person(s) named above.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_sig", "SIGNATURE OF NOTARY PUBLIC", col_span=0.6, field_type="signature"),
+                    FieldDef(f"{tag}_date", "DATE", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_name", "PRINTED NAME", col_span=0.4),
+                    FieldDef(f"{tag}_commission_no", "COMMISSION NO.", col_span=0.3),
+                    FieldDef(f"{tag}_commission_exp", "EXPIRES", col_span=0.3, field_type="date"),
+                ]),
+            ],
+        ),
+    ]
+
+
+def _damage_disclosure_variants() -> list[BlockVariant]:
+    """Damage disclosure statement. Required in ~6+ states (NY, NC, ND, IA, MN)."""
+    return [
+        BlockVariant(
+            block_type=BlockType.DAMAGE_DISCLOSURE,
+            variant_id="damage_disclosure_v1",
+            title="DAMAGE DISCLOSURE STATEMENT",
+            title_style="left",
+            height_weight=1.5,
+            rows=[
+                RowDef([FieldDef("damage_preamble",
+                        "Has the vehicle sustained damage in excess of the threshold amount or been declared "
+                        "a total loss by an insurance company?",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("damage_check",
+                        "[ ] YES — Vehicle has sustained damage  [ ] NO — Vehicle has NOT sustained damage",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef("damage_seller_sig", "SELLER SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef("damage_date", "DATE", col_span=0.5, field_type="date"),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.DAMAGE_DISCLOSURE,
+            variant_id="damage_disclosure_v2",
+            title="DISCLOSURE OF DAMAGE",
+            title_style="banner",
+            height_weight=1.8,
+            rows=[
+                RowDef([FieldDef("damage_preamble",
+                        "SELLER MUST DISCLOSE: Has this vehicle been damaged by flood, fire, collision, or other "
+                        "event resulting in damage exceeding 25% of the vehicle's fair market value?",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("damage_check",
+                        "[ ] YES  [ ] NO  [ ] UNKNOWN",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("damage_description", "IF YES, DESCRIBE DAMAGE")]),
+                RowDef([
+                    FieldDef("damage_seller_sig", "SELLER SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef("damage_buyer_sig", "BUYER SIGNATURE", col_span=0.5, field_type="signature"),
                 ]),
             ],
         ),
@@ -831,6 +1026,8 @@ VARIANT_POOL: dict[BlockType, list[BlockVariant]] = {
     BlockType.BACK_WARNING: _back_warning_variants(),
     BlockType.TRANSFER: [],  # built dynamically with tag
     BlockType.DEALER_REASSIGNMENT: [],  # built dynamically with ordinal
+    BlockType.NOTARY: [],  # built dynamically with tag
+    BlockType.DAMAGE_DISCLOSURE: _damage_disclosure_variants(),
     BlockType.BACK_LEGAL: _back_legal_variants(),
 }
 
@@ -934,18 +1131,32 @@ def build_random_back_layout(
     """Pick one variant per back-side block type and assemble a layout.
 
     The back side has NO border — just a light background pattern.
-    Returns a DocumentLayout with border_text="" and bottom_border_text="".
+    Randomly includes optional sections (notary, damage disclosure)
+    to simulate variation across states.
     """
     if rng is None:
         rng = random.Random()
 
     font_family = rng.choice(FONT_FAMILIES)
 
+    # Decide which optional sections to include
+    include_notary = rng.random() < 0.4        # ~40% of states require notary
+    include_damage = rng.random() < 0.3        # ~30% of states have damage disclosure
+
+    # Build the block order dynamically
+    block_order: list[BlockType] = [BlockType.BACK_WARNING, BlockType.TRANSFER]
+    if include_notary:
+        block_order.append(BlockType.NOTARY)
+    if include_damage:
+        block_order.append(BlockType.DAMAGE_DISCLOSURE)
+    block_order.append(BlockType.DEALER_REASSIGNMENT)  # first
+    block_order.append(BlockType.DEALER_REASSIGNMENT)  # second
+    block_order.append(BlockType.BACK_LEGAL)
+
     blocks: list[BlockVariant] = []
 
     # Dealer reassignment ordinals
     dealer_ordinals = ["FIRST", "SECOND"]
-    # Pick one dealer style index for consistency
     dealer_style_idx = rng.randint(0, 1)
 
     dealer_variants_by_ordinal: dict[str, BlockVariant] = {}
@@ -955,13 +1166,16 @@ def build_random_back_layout(
         dealer_variants_by_ordinal[ordinal] = variants[idx]
 
     dealer_counter = 0
-    for block_type in BACK_BLOCK_ORDER:
+    for block_type in block_order:
         if block_type == BlockType.DEALER_REASSIGNMENT:
             ordinal = dealer_ordinals[dealer_counter]
             variant = dealer_variants_by_ordinal[ordinal]
             dealer_counter += 1
         elif block_type == BlockType.TRANSFER:
             variants = _transfer_variants("transfer")
+            variant = rng.choice(variants)
+        elif block_type == BlockType.NOTARY:
+            variants = _notary_variants("notary")
             variant = rng.choice(variants)
         else:
             pool = VARIANT_POOL[block_type]

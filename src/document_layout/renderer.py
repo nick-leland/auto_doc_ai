@@ -402,6 +402,14 @@ def _get_handwriting_group(field_name: str) -> str:
         return "dealer_second_agent"
     elif field_name.startswith("dealer_second_buyer"):
         return "dealer_second_buyer"
+    # Notary — separate person
+    elif field_name.startswith("notary"):
+        return "notary"
+    # Damage disclosure — seller signs
+    elif field_name.startswith("damage_seller"):
+        return "transfer_seller"
+    elif field_name.startswith("damage_buyer"):
+        return "transfer_buyer"
     return "default"
 
 
