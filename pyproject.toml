@@ -9,5 +9,6 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     "Pillow>=11.0.0",
+    "setuptools>=82.0.1",
     "svgwrite>=1.4.3",
 ]
