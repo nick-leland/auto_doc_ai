@@ -83,10 +83,9 @@ class DocumentLayout:
 FONT_FAMILIES = [
     "Helvetica",
     "Arial",
-    "Times New Roman",
-    "Courier New",
-    "Georgia",
-    "Palatino",
+    "Frutiger",
+    "Myriad Pro",
+    "Univers",
 ]
 
 
