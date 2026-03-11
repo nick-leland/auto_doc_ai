@@ -5,10 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "datasets>=4.7.0",
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
-    "Pillow>=11.0.0",
+    "pillow>=11.0.0",
+    "seqeval>=1.2.2",
     "setuptools>=82.0.1",
     "svgwrite>=1.4.3",
+    "torch>=2.10.0",
+    "transformers>=5.3.0",
 ]
