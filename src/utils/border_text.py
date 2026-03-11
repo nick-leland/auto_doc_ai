@@ -93,8 +93,9 @@ def render_border_text(
     font_size_px: float | None = None,
     padding_x: float | None = None,
     padding_y: float | None = None,
+    target_display_height: float | None = None,
     rng: random.Random | None = None,
-) -> None:
+) -> float:
     """Draw border text on the document as embedded raster images."""
     if rng is None:
         rng = random.Random()
@@ -132,6 +133,8 @@ def render_border_text(
     fg_rgb = _hex_to_rgb(fg_color)
     bg_rgb = _hex_to_rgb(bg_color)
 
+    rendered_heights: list[float] = []
+
     for cx, cy, text, rotation in placements:
         estimated_fs = min(font_size_px, band_thickness * 0.46)
         scale_factor = 4
@@ -151,10 +154,17 @@ def render_border_text(
 
         max_display_width = max_box_width
         max_display_height = band_thickness * 0.92
+        if orientation in {"Bottom", "Sides"}:
+            # Keep the lower and side banners visually consistent by using the
+            # same target thickness after rasterization and scaling.
+            max_display_height = band_thickness * 0.6
+        if target_display_height is not None:
+            max_display_height = target_display_height
         img_w, img_h = img.size
         scale = min(max_display_width / img_w, max_display_height / img_h)
         display_w = img_w * scale
         display_h = img_h * scale
+        rendered_heights.append(display_h)
         x = cx - display_w / 2
         y = cy - display_h / 2
 
@@ -170,3 +180,5 @@ def render_border_text(
             document.add(group)
         else:
             document.add(image)
+
+    return max(rendered_heights, default=0.0)

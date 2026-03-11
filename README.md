@@ -28,9 +28,15 @@ Generated documents span all 50 US states with randomized layouts, fonts, colors
 
 <p float="left">
   <img src="dataset_samples/images/title_0000_front.png" width="220" />
+  <img src="dataset_samples/images/title_0001_front.png" width="220" />
   <img src="dataset_samples/images/title_0002_front.png" width="220" />
-  <img src="dataset_samples/images/title_0004_front.png" width="220" />
+  <img src="dataset_samples/images/title_0003_front.png" width="220" />
 </p>
+
+## TODO
+
+- Expand generation beyond titles to cover the broader DMV document set, including driver's licenses, registration forms, tax forms, and other supporting state paperwork.
+- Add support for more specialized and lower-frequency workflows such as salvage title packets, rebuilt title documentation, lien sale paperwork, and related exception-case title processing forms.
 
 ## Quick Start
 

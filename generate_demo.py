@@ -137,14 +137,19 @@ for doc in docs:
         drawing, front_layout.border_text, w, h, border_size,
         orientation="Top", fg_color=bg_col, bg_color=border_col, rng=border_rng,
     )
-    render_border_text(
-        drawing, front_layout.side_border_text, w, h, border_size,
-        orientation="Sides", fg_color=bg_col, bg_color=border_col, rng=border_rng,
-    )
-    render_border_text(
+    bottom_banner_height = render_border_text(
         drawing, front_layout.bottom_border_text, w, h, border_size,
         orientation="Bottom", fg_color=bg_col, bg_color=border_col, rng=border_rng,
     )
+    if front_layout.side_border_text and border_rng.random() < 0.3:
+        render_border_text(
+            drawing, front_layout.side_border_text, w, h, border_size,
+            orientation="Sides",
+            fg_color=bg_col,
+            bg_color=border_col,
+            target_display_height=bottom_banner_height,
+            rng=border_rng,
+        )
 
     content_rect = (
         border_size + 10,
