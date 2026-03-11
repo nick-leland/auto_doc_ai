@@ -6,10 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.7.0",
+    "faker>=40.8.0",
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     "pillow>=11.0.0",
+    "requests>=2.32.5",
     "seqeval>=1.2.2",
     "setuptools>=82.0.1",
     "svgwrite>=1.4.3",
