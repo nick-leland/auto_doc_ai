@@ -186,9 +186,11 @@ def generate_one(name: str, size: tuple[int, int], seed: int,
     )
     add_background_no_border(drawing_back, bg_params_back)
 
-    margin = 30 if w > 1000 else 12
-    back_content_rect = (margin, margin, w - 2 * margin, h - 2 * margin)
-    back_result = solve_layout(back_layout, back_content_rect)
+    back_content_rect = (
+        border_size + 10, border_size + 10,
+        w - 2 * (border_size + 10), h - 2 * (border_size + 10),
+    )
+    back_result = solve_layout(back_layout, back_content_rect, compact=True)
     back_metadata = render_layout(drawing_back, back_result, font_family=back_layout.font_family)
     fill_values(drawing_back, back_metadata, values, rng=random.Random(seed + 1))
     drawing_back.save()

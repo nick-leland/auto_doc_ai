@@ -23,6 +23,12 @@ FIELD_GAP_FACTOR = 0.3        # horizontal gap between fields in a row
 LABEL_FONT_RATIO = 0.70       # label text size relative to base font_size
 HEADER_FONT_RATIO = 1.6       # header LABEL_ONLY text relative to base font_size
 
+# Compact mode overrides — for back pages with many blocks
+COMPACT_ROW_HEIGHT_FACTOR = 1.6
+COMPACT_TITLE_HEIGHT_FACTOR = 1.2
+COMPACT_BLOCK_GAP_FACTOR = 0.3
+COMPACT_PADDING_X_FACTOR = 0.3
+
 
 # ---------------------------------------------------------------------------
 # Result data classes
@@ -61,28 +67,31 @@ class LayoutResult:
 # Height computation
 # ---------------------------------------------------------------------------
 
-def _row_height(row: RowDef, font_size: float) -> float:
+def _row_height(row: RowDef, font_size: float, compact: bool = False) -> float:
     """Height of a single row, accounting for multi-line fields."""
     max_lines = max(f.height_lines for f in row.fields)
-    return font_size * ROW_HEIGHT_FACTOR * max_lines
+    factor = COMPACT_ROW_HEIGHT_FACTOR if compact else ROW_HEIGHT_FACTOR
+    return font_size * factor * max_lines
 
 
-def _block_height(block: BlockVariant, font_size: float) -> float:
+def _block_height(block: BlockVariant, font_size: float, compact: bool = False) -> float:
     """Total height a block needs at a given font_size."""
     h = 0.0
     if block.title:
-        h += font_size * TITLE_HEIGHT_FACTOR
+        title_factor = COMPACT_TITLE_HEIGHT_FACTOR if compact else TITLE_HEIGHT_FACTOR
+        h += font_size * title_factor
     for row in block.rows:
-        h += _row_height(row, font_size)
+        h += _row_height(row, font_size, compact)
     return h
 
 
-def _total_height(blocks: list[BlockVariant], font_size: float) -> float:
+def _total_height(blocks: list[BlockVariant], font_size: float, compact: bool = False) -> float:
     """Total height of all blocks + inter-block gaps."""
     if not blocks:
         return 0.0
-    h = sum(_block_height(b, font_size) for b in blocks)
-    h += font_size * BLOCK_GAP_FACTOR * (len(blocks) - 1)
+    gap_factor = COMPACT_BLOCK_GAP_FACTOR if compact else BLOCK_GAP_FACTOR
+    h = sum(_block_height(b, font_size, compact) for b in blocks)
+    h += font_size * gap_factor * (len(blocks) - 1)
     return h
 
 
@@ -96,12 +105,13 @@ def _solve_font_size(
     lo: float = 4.0,
     hi: float = 60.0,
     precision: float = 0.25,
+    compact: bool = False,
 ) -> float:
     """Find the largest font_size where all blocks fit in available_height."""
     best = lo
     while hi - lo > precision:
         mid = (lo + hi) / 2
-        if _total_height(blocks, mid) <= available_height:
+        if _total_height(blocks, mid, compact) <= available_height:
             best = mid
             lo = mid
         else:
@@ -172,12 +182,14 @@ def _place_row_fields(
 def solve_layout(
     layout: DocumentLayout,
     content_rect: tuple[float, float, float, float],
+    compact: bool = False,
 ) -> LayoutResult:
     """Solve for font size and compute all placements.
 
     Args:
         layout: DocumentLayout with blocks and font_family
         content_rect: (x, y, w, h) of the usable area inside the border
+        compact: Use tighter spacing (for back pages with many blocks)
 
     Returns:
         LayoutResult with font_size and block/field placements
@@ -186,20 +198,24 @@ def solve_layout(
     blocks = layout.blocks
 
     # Solve font size
-    font_size = _solve_font_size(blocks, ch)
+    font_size = _solve_font_size(blocks, ch, compact=compact)
     layout.font_size = font_size
 
-    pad_x = font_size * PADDING_X_FACTOR
+    pad_x_factor = COMPACT_PADDING_X_FACTOR if compact else PADDING_X_FACTOR
+    gap_factor = COMPACT_BLOCK_GAP_FACTOR if compact else BLOCK_GAP_FACTOR
+    title_factor = COMPACT_TITLE_HEIGHT_FACTOR if compact else TITLE_HEIGHT_FACTOR
+
+    pad_x = font_size * pad_x_factor
     inner_x = cx + pad_x
     inner_w = cw - 2 * pad_x
-    block_gap = font_size * BLOCK_GAP_FACTOR
+    block_gap = font_size * gap_factor
 
     # Place blocks top to bottom
     cursor_y = cy
     block_placements: list[BlockPlacement] = []
 
     for block in blocks:
-        bh = _block_height(block, font_size)
+        bh = _block_height(block, font_size, compact)
         title_rect = None
         field_placements: list[FieldPlacement] = []
 
@@ -208,13 +224,13 @@ def solve_layout(
 
         # Section title
         if block.title:
-            title_h = font_size * TITLE_HEIGHT_FACTOR
+            title_h = font_size * title_factor
             title_rect = (inner_x, row_y, inner_w, title_h)
             row_y += title_h
 
         # Rows
         for row in block.rows:
-            rh = _row_height(row, font_size)
+            rh = _row_height(row, font_size, compact)
             fps = _place_row_fields(row, inner_x, row_y, inner_w, rh, font_size, is_header)
             field_placements.extend(fps)
             row_y += rh

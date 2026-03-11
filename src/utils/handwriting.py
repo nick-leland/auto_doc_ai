@@ -60,8 +60,20 @@ def _render_text_to_png(
     draw.text((pad - left + dx, pad - top + dy), text, font=font,
               fill=(*color, 255))
 
-    # Slight rotation
-    angle = rng.uniform(-4, 4)
+    # Slight rotation — use a distribution that's tight for most cases,
+    # with occasional larger angles. Scale down for longer text to avoid
+    # going off the line.
+    text_len = len(text)
+    if text_len > 30:
+        max_angle = 1.0
+    elif text_len > 15:
+        max_angle = 2.0
+    else:
+        max_angle = 3.5
+
+    # Normal-ish distribution: most angles near 0, rare outliers
+    # Use triangular distribution centered at 0 for a natural feel
+    angle = rng.triangular(-max_angle, max_angle, 0)
     img = img.rotate(angle, expand=True, resample=Image.BICUBIC,
                      fillcolor=(0, 0, 0, 0))
 
