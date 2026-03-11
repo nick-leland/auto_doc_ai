@@ -10,8 +10,10 @@ Usage:
 """
 
 import argparse
+import importlib.util
 import json
 import random
+import shutil
 import string
 import time
 from datetime import date, timedelta
@@ -634,16 +636,77 @@ def generate_document_values(
 # Document rendering
 # ---------------------------------------------------------------------------
 
-def _svg_to_png(svg_path: Path, png_path: Path) -> bool:
-    """Convert SVG to PNG using rsvg-convert. Returns True on success."""
+def _available_svg_rasterizer() -> str | None:
+    """Return the first supported SVG rasterizer available in the environment."""
+    if shutil.which("rsvg-convert"):
+        return "rsvg-convert"
+    if importlib.util.find_spec("cairosvg") is not None:
+        return "cairosvg"
+    if shutil.which("magick"):
+        return "magick"
+    if shutil.which("convert"):
+        return "convert"
+    return None
+
+
+def _require_svg_rasterizer() -> str:
+    """Ensure SVG rasterization is available before generating the dataset."""
+    rasterizer = _available_svg_rasterizer()
+    if rasterizer is None:
+        raise RuntimeError(
+            "No SVG rasterizer available. Install `rsvg-convert` (recommended), "
+            "install the Python package `cairosvg`, or make ImageMagick "
+            "(`magick`/`convert`) available in PATH."
+        )
+    return rasterizer
+
+
+def _svg_to_png(svg_path: Path, png_path: Path) -> None:
+    """Convert SVG to PNG, raising a clear error when rasterization fails."""
+    rasterizer = _require_svg_rasterizer()
+
+    if rasterizer == "rsvg-convert":
+        try:
+            subprocess.run(
+                ["rsvg-convert", str(svg_path), "-o", str(png_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            return
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.strip() or exc.stdout.strip() or str(exc)
+            raise RuntimeError(
+                f"SVG rasterization failed via rsvg-convert for {svg_path.name}: {stderr}"
+            ) from exc
+
+    if rasterizer == "cairosvg":
+        try:
+            import cairosvg
+
+            cairosvg.svg2png(url=str(svg_path), write_to=str(png_path))
+            return
+        except Exception as exc:
+            raise RuntimeError(
+                f"SVG rasterization failed via CairoSVG for {svg_path.name}: {exc}"
+            ) from exc
+
+    command = [rasterizer, str(svg_path), str(png_path)]
+    if rasterizer == "magick":
+        command = ["magick", str(svg_path), str(png_path)]
+
     try:
         subprocess.run(
-            ["rsvg-convert", str(svg_path), "-o", str(png_path)],
-            check=True, capture_output=True,
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
         )
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() or exc.stdout.strip() or str(exc)
+        raise RuntimeError(
+            f"SVG rasterization failed via {rasterizer} for {svg_path.name}: {stderr}"
+        ) from exc
 
 
 def _synthetic_vehicle_info(rng: random.Random) -> dict:
@@ -754,8 +817,7 @@ def render_document(
         # --- SVG → clean PNG ---
         clean_png_path = out_dir / "images_clean" / f"{doc_id}_{side}.png"
         clean_png_path.parent.mkdir(exist_ok=True)
-        if not _svg_to_png(svg_path, clean_png_path):
-            continue
+        _svg_to_png(svg_path, clean_png_path)
 
         # --- Augment ---
         clean_img = Image.open(clean_png_path)
@@ -864,6 +926,7 @@ def main():
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    rasterizer = _require_svg_rasterizer()
     aug_config = AUG_PRESETS[args.augment]
 
     rng = random.Random(args.seed)
@@ -873,6 +936,7 @@ def main():
     print(f"Generating {args.count} documents in {out_dir}/")
     print(f"Size: {args.size}, Seed: {args.seed}, Augment: {args.augment}")
     print(f"NHTSA API: {'disabled' if args.no_api else 'enabled'}")
+    print(f"SVG rasterizer: {rasterizer}")
     print("-" * 60)
 
     errors = []

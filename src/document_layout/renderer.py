@@ -321,6 +321,7 @@ def render_layout(
                 "label": fp.field_def.label,
                 "field_type": fp.field_def.field_type,
                 "style": fp.field_def.style.value,
+                "height_lines": fp.field_def.height_lines,
                 "bbox": {
                     "x": round(fp.x, 2), "y": round(fp.y, 2),
                     "w": round(fp.width, 2), "h": round(fp.height, 2),
@@ -465,6 +466,45 @@ def _get_handwriting_group(field_name: str) -> str:
     return "default"
 
 
+def _estimate_label_text_width(label: str, doc_font_size: float) -> float:
+    """Approximate printed label width in SVG units."""
+    return len(label) * doc_font_size * LABEL_FONT_RATIO * 0.58
+
+
+def _handwriting_placement(
+    field: dict,
+    handwriting_font_size: int,
+    doc_font_size: float,
+) -> tuple[float, float, float, float, bool]:
+    """Choose the handwriting placement box.
+
+    Small one-line fields cannot always accommodate realistic handwriting
+    below the printed label. In those cases, move the handwriting to the
+    right of the label and let it use the full field height.
+    """
+    bbox = field["bbox"]
+    label_rect = field["label_rect"]
+    value_rect = field["value_rect"]
+    style = field["style"]
+    line_slots = max(1, int(field.get("height_lines", 1)))
+
+    if style != "inline" and line_slots == 1:
+        target_svg_height = handwriting_font_size * 0.5
+        if target_svg_height > value_rect["h"] * 1.05:
+            label_w = min(
+                label_rect["w"] * 0.9,
+                _estimate_label_text_width(field["label"], doc_font_size),
+            )
+            pad = max(3.0, doc_font_size * 0.4)
+            x = label_rect["x"] + label_w + pad
+            right = bbox["x"] + bbox["w"]
+            width = right - x
+            if width > bbox["w"] * 0.28:
+                return x, bbox["y"], width, bbox["h"], False
+
+    return value_rect["x"], value_rect["y"], value_rect["w"], value_rect["h"], line_slots > 1
+
+
 def fill_values(
     drawing: svgwrite.Drawing,
     metadata: dict,
@@ -530,13 +570,16 @@ def fill_values(
     if fillable_heights:
         fillable_heights.sort()
         median_h = fillable_heights[len(fillable_heights) // 2]
+        doc_font_size = float(metadata["document"].get("font_size", median_h))
         # Render size in PIL pixels — scaled down by 0.5 for SVG placement.
-        # No hard floor: small docs get proportionally smaller text.
         machine_font_size = max(16, int(median_h * 1.5))
-        handwriting_font_size = max(16, int(median_h * 1.8))
+        handwriting_font_size = max(28, int(median_h * 2.2), int(doc_font_size * 4.0))
+        signature_font_size = max(handwriting_font_size + 10, int(handwriting_font_size * 1.2))
     else:
+        doc_font_size = 18.0
         machine_font_size = 72
         handwriting_font_size = 80
+        signature_font_size = 96
 
     for block in metadata["blocks"]:
         block_type = block.get("block_type", "")
@@ -561,27 +604,41 @@ def fill_values(
             if w <= 0 or h <= 0:
                 continue
 
+            line_slots = max(1, int(field.get("height_lines", 1)))
+
             if _is_handwriting_field(name, field_type, block_type):
                 group = _get_handwriting_group(name)
                 hw_font = _get_hw_font(group)
+                hx, hy, hw, hh, align_top = _handwriting_placement(
+                    field, handwriting_font_size, doc_font_size,
+                )
 
                 if field_type == "signature":
                     g = render_signature(
-                        drawing, value, x, y, w, h,
+                        drawing, value, hx, hy, hw, hh,
                         font_path=hw_font,
-                        font_size=handwriting_font_size, rng=rng,
+                        font_size=signature_font_size,
+                        line_slots=1,
+                        align_top=align_top,
+                        rng=rng,
                     )
                 else:
                     g = render_handwriting(
-                        drawing, value, x, y, w, h,
+                        drawing, value, hx, hy, hw, hh,
                         font_path=hw_font,
-                        font_size=handwriting_font_size, rng=rng,
+                        font_size=handwriting_font_size,
+                        line_slots=line_slots,
+                        align_top=align_top,
+                        rng=rng,
                     )
             else:
                 g = render_machinetext(
                     drawing, value, x, y, w, h,
                     font_path=machine_font_path,
-                    font_size=machine_font_size, rng=rng,
+                    font_size=machine_font_size,
+                    line_slots=line_slots,
+                    align_top=line_slots > 1,
+                    rng=rng,
                 )
 
             drawing.add(g)

@@ -23,12 +23,45 @@ FONT_FILES = sorted(
 ) if FONTS_DIR.exists() else []
 
 
+def _wrap_text(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    max_width: int,
+    max_lines: int | None = None,
+) -> list[str]:
+    """Word-wrap handwriting text, preserving a fuller first line."""
+    words = text.split()
+    if not words:
+        return [text]
+
+    dummy = Image.new("RGBA", (1, 1))
+    draw = ImageDraw.Draw(dummy)
+
+    lines = []
+    current = words[0]
+    for word in words[1:]:
+        test = current + " " + word
+        bbox = draw.textbbox((0, 0), test, font=font)
+        if bbox[2] - bbox[0] <= max_width:
+            current = test
+        else:
+            if max_lines is not None and len(lines) >= max_lines - 1:
+                current = test
+                continue
+            lines.append(current)
+            current = word
+    lines.append(current)
+    return lines
+
+
 def _render_text_to_png(
     text: str,
     font_path: Path,
     font_size: int,
     color: tuple[int, int, int] = (20, 20, 20),
     blur: float = 0.6,
+    max_width_px: int | None = None,
+    max_lines: int | None = None,
     rng: random.Random | None = None,
 ) -> Image.Image:
     """Render text to a transparent PNG using PIL.
@@ -42,23 +75,42 @@ def _render_text_to_png(
     font = ImageFont.truetype(str(font_path), size=font_size)
 
     # Measure text size
-    dummy = Image.new("RGBA", (4000, 800), (0, 0, 0, 0))
+    dummy = Image.new("RGBA", (4000, 1600), (0, 0, 0, 0))
     draw = ImageDraw.Draw(dummy)
-    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
-    tw, th = right - left, bottom - top
+
+    if max_width_px is not None:
+        lines = _wrap_text(text, font, max_width_px, max_lines=max_lines)
+    else:
+        lines = [text]
+
+    line_metrics = []
+    max_w = 0
+    for line in lines:
+        left, top, right, bottom = draw.textbbox((0, 0), line, font=font)
+        lw, lh = right - left, bottom - top
+        line_metrics.append((left, top, lw, lh))
+        max_w = max(max_w, lw)
+
+    line_spacing = int(font_size * 1.2)
+    total_h = line_spacing * len(lines)
 
     # Render on transparent background with padding for rotation
     pad = max(40, int(font_size * 0.4))
-    canvas_w = tw + pad * 2
-    canvas_h = th + pad * 2
+    canvas_w = max_w + pad * 2
+    canvas_h = total_h + pad * 2
     img = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Slight random offset
-    dx = rng.randint(-3, 3)
-    dy = rng.randint(-3, 3)
-    draw.text((pad - left + dx, pad - top + dy), text, font=font,
-              fill=(*color, 255))
+    for i, (line, (left, top, _, _)) in enumerate(zip(lines, line_metrics)):
+        dx = rng.randint(-3, 3)
+        dy = rng.randint(-2, 2)
+        text_y = pad + i * line_spacing - top + dy
+        draw.text(
+            (pad - left + dx, text_y),
+            line,
+            font=font,
+            fill=(*color, 255),
+        )
 
     # Slight rotation — use a distribution that's tight for most cases,
     # with occasional larger angles. Scale down for longer text to avoid
@@ -109,6 +161,8 @@ def _place_image(
     width: float,
     height: float,
     font_size: int | None,
+    line_slots: int = 1,
+    align_top: bool = False,
 ) -> svgwrite.container.Group:
     """Scale and position a rendered text image into a value box."""
     img_w, img_h = img.size
@@ -119,8 +173,9 @@ def _place_image(
         scale = 0.5
         if img_w * scale > width * 0.95:
             scale = (width * 0.95) / img_w
-        if img_h * scale > height * 0.85:
-            scale = (height * 0.85) / img_h
+        height_limit = height * (0.95 if align_top else 0.85)
+        if img_h * scale > height_limit:
+            scale = height_limit / img_h
     else:
         scale = min(width / img_w, height / img_h) * 0.9
 
@@ -128,7 +183,11 @@ def _place_image(
     display_h = img_h * scale
 
     img_x = x + height * 0.05
-    img_y = y + (height - display_h) / 2
+    if align_top:
+        per_line_h = height / max(1, line_slots)
+        img_y = y + min(per_line_h * 0.08, height * 0.06)
+    else:
+        img_y = y + (height - display_h) / 2
 
     data_uri = _img_to_data_uri(img)
 
@@ -150,6 +209,8 @@ def render_handwriting(
     height: float,
     font_path: Path | str | None = None,
     font_size: int | None = None,
+    line_slots: int = 1,
+    align_top: bool = False,
     color: tuple[int, int, int] = (20, 20, 20),
     rng: random.Random | None = None,
 ) -> svgwrite.container.Group:
@@ -177,10 +238,23 @@ def render_handwriting(
         font_path = Path(font_path)
 
     render_size = font_size if font_size is not None else max(48, int(height * 2))
-    img = _render_text_to_png(text, font_path, render_size, color=color,
-                              blur=0.6, rng=rng)
+    scale_est = 0.5 if font_size is not None else (height * 0.9) / render_size
+    max_width_px = int(width * 0.95 / scale_est) if scale_est > 0 else None
+    img = _render_text_to_png(
+        text,
+        font_path,
+        render_size,
+        color=color,
+        blur=0.6,
+        max_width_px=max_width_px,
+        max_lines=line_slots if line_slots > 1 else 1,
+        rng=rng,
+    )
 
-    return _place_image(drawing, img, x, y, width, height, font_size)
+    return _place_image(
+        drawing, img, x, y, width, height, font_size,
+        line_slots=line_slots, align_top=align_top,
+    )
 
 
 def render_signature(
@@ -192,6 +266,8 @@ def render_signature(
     height: float,
     font_path: Path | str | None = None,
     font_size: int | None = None,
+    line_slots: int = 1,
+    align_top: bool = False,
     color: tuple[int, int, int] = (20, 20, 20),
     rng: random.Random | None = None,
 ) -> svgwrite.container.Group:
@@ -205,7 +281,20 @@ def render_signature(
         font_path = Path(font_path)
 
     render_size = font_size if font_size is not None else max(64, int(height * 2.5))
-    img = _render_text_to_png(text, font_path, render_size, color=color,
-                              blur=0.8, rng=rng)
+    scale_est = 0.5 if font_size is not None else (height * 0.9) / render_size
+    max_width_px = int(width * 0.95 / scale_est) if scale_est > 0 else None
+    img = _render_text_to_png(
+        text,
+        font_path,
+        render_size,
+        color=color,
+        blur=0.8,
+        max_width_px=max_width_px,
+        max_lines=line_slots if line_slots > 1 else 1,
+        rng=rng,
+    )
 
-    return _place_image(drawing, img, x, y, width, height, font_size)
+    return _place_image(
+        drawing, img, x, y, width, height, font_size,
+        line_slots=line_slots, align_top=align_top,
+    )

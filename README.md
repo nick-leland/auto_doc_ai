@@ -37,7 +37,9 @@ Generated documents span all 50 US states with randomized layouts, fonts, colors
 ### Requirements
 
 - Python 3.12+
-- `rsvg-convert` (for SVG → PNG rasterization): `brew install librsvg` on macOS
+- `rsvg-convert` for SVG -> PNG rasterization. This is required for generating `images_clean/`, augmented `images/`, `annotations/`, and `layoutlm/` outputs.
+  - macOS: `brew install librsvg`
+  - Ubuntu/Debian: `sudo apt-get install librsvg2-bin`
 
 ### Installation
 
@@ -46,6 +48,8 @@ git clone <repo-url> && cd auto_doc_ai
 uv sync   # or: pip install -e .
 uv pip install faker requests
 ```
+
+If `rsvg-convert` is not available, `generate_dataset.py` will fail before generation starts rather than producing a partial dataset with only SVG files.
 
 ### Generate a dataset
 

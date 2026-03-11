@@ -354,7 +354,7 @@ def _owner_variants() -> list[BlockVariant]:
                     FieldDef("owner_name_2", "AND / OR", col_span=0.7),
                     FieldDef("ownership_type", "OWNERSHIP", col_span=0.3),
                 ]),
-                RowDef([FieldDef("owner_address", "ADDRESS", height_lines=2)]),
+                RowDef([FieldDef("owner_address", "ADDRESS")]),
             ],
         ),
         BlockVariant(
@@ -389,7 +389,7 @@ def _owner_variants() -> list[BlockVariant]:
                     FieldDef("owner_name", "OWNER NAME(S)", col_span=0.7),
                     FieldDef("ownership_type", "[ ] AND  [ ] OR  [ ] JTWROS", col_span=0.3),
                 ]),
-                RowDef([FieldDef("owner_address", "MAILING ADDRESS", height_lines=2)]),
+                RowDef([FieldDef("owner_address", "MAILING ADDRESS")]),
                 RowDef([FieldDef("owner_tod", "TRANSFER ON DEATH BENEFICIARY (if applicable)")]),
             ],
         ),
@@ -437,7 +437,7 @@ def _owner_variants() -> list[BlockVariant]:
                     FieldDef("ownership_type", "OWNERSHIP (AND/OR/JTWROS)", col_span=0.5),
                     FieldDef("owner_tod", "TOD BENEFICIARY", col_span=0.5),
                 ]),
-                RowDef([FieldDef("owner_address", "MAILING ADDRESS", height_lines=2)]),
+                RowDef([FieldDef("owner_address", "MAILING ADDRESS")]),
             ],
         ),
     ]
@@ -639,7 +639,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                         "described on the face of this certificate, to:",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_buyer_name", "BUYER(S) NAME")]),
-                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS", height_lines=2)]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS")]),
                 RowDef([
                     FieldDef(f"{tag}_new_lien", "LIENHOLDER (if none, state none)", col_span=0.6),
                     FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", col_span=0.4, field_type="date"),
@@ -695,7 +695,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                     FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.3, field_type="date"),
                     FieldDef(f"{tag}_sale_price", "SALE PRICE $", col_span=0.3),
                 ]),
-                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS", height_lines=2)]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS")]),
                 RowDef([
                     FieldDef(f"{tag}_new_lien", "NEW LIENHOLDER", col_span=0.5),
                     FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS", col_span=0.5),
@@ -733,7 +733,7 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                         "buyer(s) named below, subject to any liens noted herein.",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_buyer_name", "PURCHASER(S) NAME (PLEASE PRINT)")]),
-                RowDef([FieldDef(f"{tag}_buyer_address", "PURCHASER ADDRESS", height_lines=2)]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "PURCHASER ADDRESS")]),
                 RowDef([
                     FieldDef(f"{tag}_new_lien", "LIENHOLDER (IF NONE, STATE NONE)", col_span=0.6),
                     FieldDef(f"{tag}_new_lien_date", "LIEN DATE", col_span=0.4, field_type="date"),
@@ -780,7 +780,7 @@ def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
                         "The undersigned dealer hereby assigns and warrants title of this vehicle to:",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([FieldDef(f"{tag}_buyer_name", "BUYER(S) NAME")]),
-                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS", height_lines=2)]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "ADDRESS")]),
                 RowDef([
                     FieldDef(f"{tag}_new_lien", "LIENHOLDER (if none, state none)", col_span=0.6),
                     FieldDef(f"{tag}_new_lien_date", "DATE OF LIEN", col_span=0.4, field_type="date"),
@@ -836,7 +836,7 @@ def _dealer_reassignment_variants(ordinal: str = "FIRST") -> list[BlockVariant]:
                     FieldDef(f"{tag}_buyer_name", "BUYER NAME", col_span=0.6),
                     FieldDef(f"{tag}_date", "DATE OF SALE", col_span=0.4, field_type="date"),
                 ]),
-                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS", height_lines=2)]),
+                RowDef([FieldDef(f"{tag}_buyer_address", "BUYER ADDRESS")]),
                 RowDef([
                     FieldDef(f"{tag}_new_lien", "NEW LIENHOLDER", col_span=0.5),
                     FieldDef(f"{tag}_new_lien_address", "LIENHOLDER ADDRESS", col_span=0.5),

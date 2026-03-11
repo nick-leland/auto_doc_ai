@@ -25,7 +25,12 @@ FONT_FILES = sorted(
 ) if FONTS_DIR.exists() else []
 
 
-def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+def _wrap_text(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    max_width: int,
+    max_lines: int | None = None,
+) -> list[str]:
     """Word-wrap text to fit within max_width pixels. Returns list of lines."""
     words = text.split()
     if not words:
@@ -42,6 +47,9 @@ def _wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[
         if bbox[2] - bbox[0] <= max_width:
             current = test
         else:
+            if max_lines is not None and len(lines) >= max_lines - 1:
+                current = test
+                continue
             lines.append(current)
             current = word
     lines.append(current)
@@ -54,6 +62,7 @@ def _render_text_to_png(
     font_size: int,
     color: tuple[int, int, int] = (10, 10, 10),
     max_width_px: int | None = None,
+    max_lines: int | None = None,
 ) -> Image.Image:
     """Render text to a transparent PNG using PIL.
 
@@ -64,7 +73,7 @@ def _render_text_to_png(
 
     # Determine lines (wrap if needed)
     if max_width_px is not None:
-        lines = _wrap_text(text, font, max_width_px)
+        lines = _wrap_text(text, font, max_width_px, max_lines=max_lines)
     else:
         lines = [text]
 
@@ -119,6 +128,8 @@ def render_machinetext(
     height: float,
     font_path: Path | str | None = None,
     font_size: int | None = None,
+    line_slots: int = 1,
+    align_top: bool = False,
     color: tuple[int, int, int] = (10, 10, 10),
     rng: random.Random | None = None,
 ) -> svgwrite.container.Group:
@@ -157,8 +168,14 @@ def render_machinetext(
     scale_est = 0.5 if font_size is not None else (height * 0.9) / render_size
     max_width_px = int(width * 0.9 / scale_est) if scale_est > 0 else None
 
-    img = _render_text_to_png(text, font_path, render_size, color=color,
-                              max_width_px=max_width_px)
+    img = _render_text_to_png(
+        text,
+        font_path,
+        render_size,
+        color=color,
+        max_width_px=max_width_px,
+        max_lines=line_slots if line_slots > 1 else 1,
+    )
 
     # Scale: if font_size is fixed, use a constant scale factor derived from
     # the render size so text looks the same across all fields regardless
@@ -171,18 +188,22 @@ def render_machinetext(
         # But don't exceed the box width or height
         if img_w * scale > width * 0.95:
             scale = (width * 0.95) / img_w
-        if img_h * scale > height * 0.85:
-            scale = (height * 0.85) / img_h
+        height_limit = height * (0.95 if align_top else 0.85)
+        if img_h * scale > height_limit:
+            scale = height_limit / img_h
     else:
         scale = min(width / img_w, height / img_h) * 0.9
 
     display_w = img_w * scale
     display_h = img_h * scale
 
-    # Left-align; top-align with small padding so single-line text
-    # sits on the first line rather than floating between lines
+    # Left-align. Multi-line fields should start on the top line and flow down.
     img_x = x + height * 0.05
-    img_y = y + display_h * 0.1
+    if align_top:
+        per_line_h = height / max(1, line_slots)
+        img_y = y + min(per_line_h * 0.08, height * 0.06)
+    else:
+        img_y = y + display_h * 0.1
 
     data_uri = _img_to_data_uri(img)
 
