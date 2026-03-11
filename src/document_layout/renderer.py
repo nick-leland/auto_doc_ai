@@ -26,6 +26,35 @@ from .packing import (
 # Field renderers
 # ---------------------------------------------------------------------------
 
+def _wrap_label_text(
+    text: str,
+    max_width: float,
+    font_size: float,
+    max_lines: int | None = None,
+) -> list[str]:
+    """Approximate word wrapping for SVG text without font metrics."""
+    words = text.split()
+    if not words:
+        return [text]
+
+    lines = []
+    current = words[0]
+    char_width = max(font_size * 0.56, 1.0)
+
+    for word in words[1:]:
+        test = f"{current} {word}"
+        if len(test) * char_width <= max_width:
+            current = test
+            continue
+        if max_lines is not None and len(lines) >= max_lines - 1:
+            current = test
+            continue
+        lines.append(current)
+        current = word
+
+    lines.append(current)
+    return lines
+
 def _render_field_underline(
     drawing: svgwrite.Drawing,
     fp: FieldPlacement,
@@ -146,15 +175,38 @@ def _render_field_label_only(
         ))
     else:
         # Legal / disclaimer / checkbox text — same size as field labels
-        fs = font_size * LABEL_FONT_RATIO
-        text_y = ly + fs * 1.2
-        drawing.add(drawing.text(
-            fp.field_def.label,
-            insert=(lx, text_y),
+        base_fs = font_size * LABEL_FONT_RATIO
+        fs = base_fs
+        min_fs = max(base_fs * 0.62, 7.5)
+        line_height = fs * 1.15
+        max_lines = max(1, int(lh / max(line_height, 1.0)))
+
+        while True:
+            line_height = fs * 1.15
+            max_lines = max(1, int(lh / max(line_height, 1.0)))
+            lines = _wrap_label_text(fp.field_def.label, lw, fs)
+            if len(lines) <= max_lines or fs <= min_fs:
+                break
+            fs *= 0.92
+
+        line_height = fs * 1.15
+        max_lines = max(1, int(lh / max(line_height, 1.0)))
+        lines = _wrap_label_text(fp.field_def.label, lw, fs, max_lines)
+
+        text = drawing.text(
+            "",
+            insert=(lx, ly + fs),
             font_size=f"{fs:.1f}px",
             font_family=font_family,
             fill=text_color,
-        ))
+        )
+        for i, line in enumerate(lines):
+            text.add(drawing.tspan(
+                line,
+                x=[lx],
+                dy=[0 if i == 0 else line_height],
+            ))
+        drawing.add(text)
 
 
 # ---------------------------------------------------------------------------

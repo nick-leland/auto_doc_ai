@@ -182,15 +182,14 @@ def render_machinetext(
     # of their box height.
     img_w, img_h = img.size
     if font_size is not None:
-        # Fixed scale: 1 render pixel -> a fixed number of SVG units.
-        # Target: the rendered font_size maps to roughly 0.5 * font_size SVG units.
-        scale = 0.5
-        # But don't exceed the box width or height
-        if img_w * scale > width * 0.95:
-            scale = (width * 0.95) / img_w
         height_limit = height * (0.95 if align_top else 0.85)
-        if img_h * scale > height_limit:
-            scale = height_limit / img_h
+        max_scale = min((width * 0.95) / img_w, height_limit / img_h)
+        # Use the document-wide font as a floor, but let roomy one-line
+        # fields grow to better occupy their available value box.
+        scale = min(0.5, max_scale)
+        if line_slots == 1 and not align_top:
+            preferred_scale = min((width * 0.9) / img_w, (height * 0.72) / img_h)
+            scale = min(max(scale, preferred_scale), max_scale)
     else:
         scale = min(width / img_w, height / img_h) * 0.9
 
@@ -203,7 +202,7 @@ def render_machinetext(
         per_line_h = height / max(1, line_slots)
         img_y = y + min(per_line_h * 0.08, height * 0.06)
     else:
-        img_y = y + display_h * 0.1
+        img_y = y + max((height - display_h) * 0.45, 0)
 
     data_uri = _img_to_data_uri(img)
 
