@@ -145,8 +145,8 @@ def _render_field_label_only(
             fill=text_color,
         ))
     else:
-        # Legal / disclaimer text — smaller, wrapped appearance
-        fs = font_size * LABEL_FONT_RATIO * 0.9
+        # Legal / disclaimer / checkbox text — same size as field labels
+        fs = font_size * LABEL_FONT_RATIO
         text_y = ly + fs * 1.2
         drawing.add(drawing.text(
             fp.field_def.label,
@@ -174,7 +174,7 @@ def _render_block_title(
         return
 
     tx, ty, tw, th = bp.title_rect
-    title_fs = font_size * 0.8
+    title_fs = font_size * 0.9
     text_y = ty + th / 2 + title_fs * 0.35
     style = bp.block.title_style
 
@@ -351,65 +351,117 @@ def save_metadata(metadata: dict, path: str | Path) -> None:
 # Field types that get handwriting vs machine text
 # ---------------------------------------------------------------------------
 
-# Fields where the value is written by hand (owner/lienholder fills in later)
-HANDWRITING_FIELDS = {"signature"}
+# Front-side: only lien release fields are handwritten (lienholder fills in later)
+FRONT_HANDWRITING_PATTERNS = {"_release_sig", "_release_title", "_release_date"}
 
-# Fields rendered with handwriting style (by field name patterns)
-HANDWRITING_NAME_PATTERNS = {"_release_sig", "_release_title", "_release_date"}
+# Back-side block types where ALL fillable fields are handwritten
+# (people fill these in by hand at time of sale/transfer)
+BACK_HANDWRITING_BLOCKS = {
+    "back_warning", "transfer", "dealer_reassignment",
+    "notary", "damage_disclosure", "vin_verification",
+    "power_of_attorney", "back_legal",
+}
 
-# Back-side fields that are handwritten (signatures, printed names)
-BACK_HANDWRITING_PATTERNS = {
-    "_seller_sig", "_buyer_sig", "_seller_print", "_buyer_print",
-    "_agent_sig", "_agent_print",
+# Exception: dealer business details are machine (rubber stamp / pre-printed)
+DEALER_MACHINE_PATTERNS = {
+    "_dealer_name", "_dealer_license", "_dealer_address",
+    "_dealer_city", "_dealer_state",
 }
 
 
-def _is_handwriting_field(field_name: str, field_type: str) -> bool:
-    """Determine if a field should be rendered with handwriting."""
+def _is_handwriting_field(
+    field_name: str, field_type: str, block_type: str = "",
+) -> bool:
+    """Determine if a field should be rendered with handwriting.
+
+    Front side: only signatures and lien release fields.
+    Back side: everything is handwritten except tax/fee (DMV-printed)
+    and dealer business details (rubber stamp).
+    """
     if field_type == "signature":
         return True
-    for pattern in HANDWRITING_NAME_PATTERNS:
+
+    # Front-side lien release fields
+    for pattern in FRONT_HANDWRITING_PATTERNS:
         if pattern in field_name:
             return True
-    for pattern in BACK_HANDWRITING_PATTERNS:
-        if pattern in field_name:
-            return True
+
+    # Back-side logic: check block type
+    if block_type in BACK_HANDWRITING_BLOCKS:
+        # Dealer business details are machine (stamp)
+        for pattern in DEALER_MACHINE_PATTERNS:
+            if pattern in field_name:
+                return False
+        return True
+
+    # tax_fee and front-side blocks default to machine
     return False
 
 
 def _get_handwriting_group(field_name: str) -> str:
     """Determine which 'person' is writing this field.
 
-    Fields from the same lien release or transaction section are written
-    by the same person, so they share a handwriting font.
+    Fields written by the same person share a handwriting font.
+    On a real title, the seller fills in most of the transfer section,
+    the buyer fills in their own info, each dealer agent fills their
+    section, etc.
     """
     # Front: lien releases
     if field_name.startswith("first_"):
         return "first_lien"
     elif field_name.startswith("second_"):
         return "second_lien"
-    # Back: transfer by owner — seller and buyer are different people
-    elif field_name.startswith("transfer_seller"):
-        return "transfer_seller"
+
+    # Back: transfer by owner
+    # Seller fills in most fields (odometer, date, price, their DL, lien info)
+    # Buyer fills in their own name/address/DL/signature
     elif field_name.startswith("transfer_buyer"):
         return "transfer_buyer"
-    # Back: dealer reassignment — each dealer section has agent + buyer
-    elif field_name.startswith("dealer_first_agent"):
-        return "dealer_first_agent"
+    elif field_name.startswith("transfer_"):
+        return "transfer_seller"  # seller fills the rest
+
+    # Back: dealer reassignment — agent vs buyer
     elif field_name.startswith("dealer_first_buyer"):
         return "dealer_first_buyer"
-    elif field_name.startswith("dealer_second_agent"):
-        return "dealer_second_agent"
+    elif field_name.startswith("dealer_first_agent"):
+        return "dealer_first_agent"
+    elif field_name.startswith("dealer_first_"):
+        return "dealer_first_agent"  # agent fills lien/odometer/date fields
     elif field_name.startswith("dealer_second_buyer"):
         return "dealer_second_buyer"
+    elif field_name.startswith("dealer_second_agent"):
+        return "dealer_second_agent"
+    elif field_name.startswith("dealer_second_"):
+        return "dealer_second_agent"
+
     # Notary — separate person
     elif field_name.startswith("notary"):
         return "notary"
-    # Damage disclosure — seller signs
-    elif field_name.startswith("damage_seller"):
-        return "transfer_seller"
+
+    # Damage disclosure — seller fills most, buyer co-signs
     elif field_name.startswith("damage_buyer"):
         return "transfer_buyer"
+    elif field_name.startswith("damage_"):
+        return "transfer_seller"
+
+    # Witness lines
+    elif "witness1" in field_name:
+        return "witness1"
+    elif "witness2" in field_name:
+        return "witness2"
+
+    # VIN verification — inspector fills everything
+    elif field_name.startswith("vin_verify"):
+        return "vin_inspector"
+
+    # Power of attorney — owner fills in attorney info + signs
+    elif field_name.startswith("poa_co_grantor"):
+        return "poa_co_grantor"
+    elif field_name.startswith("poa_grantor"):
+        return "poa_grantor"
+    elif field_name.startswith("poa_"):
+        return "poa_grantor"  # owner writes attorney details
+
     return "default"
 
 
@@ -487,6 +539,7 @@ def fill_values(
         handwriting_font_size = 80
 
     for block in metadata["blocks"]:
+        block_type = block.get("block_type", "")
         for field in block["fields"]:
             name = field["name"]
             field_type = field["field_type"]
@@ -508,7 +561,7 @@ def fill_values(
             if w <= 0 or h <= 0:
                 continue
 
-            if _is_handwriting_field(name, field_type):
+            if _is_handwriting_field(name, field_type, block_type):
                 group = _get_handwriting_group(name)
                 hw_font = _get_hw_font(group)
 

@@ -23,8 +23,8 @@ Fields and sections found across US state vehicle titles. Checked when added to 
 - [x] Transfer on Death (TOD) beneficiary (10+ states)
 
 ### Lower Priority / State-Specific
-- [ ] VIN verification / inspection block (FL, CA, CO, NH)
-- [ ] Power of attorney section (TX, NC, CA, OR)
-- [ ] Tax / fee section (PA, CT, IN)
-- [ ] Gift transfer checkboxes (TX, CA, MA, MD)
-- [ ] Witness lines (LA requires 2 witnesses + notary)
+- [x] VIN verification / inspection block (FL, CA, CO, NH)
+- [x] Power of attorney section (TX, NC, CA, OR)
+- [x] Tax / fee section (PA, CT, IN)
+- [x] Gift transfer checkboxes (TX, CA, MA, MD)
+- [x] Witness lines (LA requires 2 witnesses + notary)

@@ -32,6 +32,9 @@ class BlockType(str, Enum):
     DEALER_REASSIGNMENT = "dealer_reassignment"
     NOTARY = "notary"
     DAMAGE_DISCLOSURE = "damage_disclosure"
+    VIN_VERIFICATION = "vin_verification"
+    POWER_OF_ATTORNEY = "power_of_attorney"
+    TAX_FEE = "tax_fee"
     BACK_LEGAL = "back_legal"
 
 
@@ -655,6 +658,9 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                 RowDef([FieldDef(f"{tag}_odom_exempt",
                         "[ ] EXEMPT — Vehicle is 20 model years or older and not required to have odometer disclosure.",
                         style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_gift_check",
+                        "[ ] GIFT — This vehicle is being transferred as a gift. No consideration was given.",
+                        style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
                     FieldDef(f"{tag}_seller_sig", "SIGNATURE(S) OF SELLER(S)", col_span=0.5, field_type="signature"),
                     FieldDef(f"{tag}_buyer_sig", "SIGNATURE(S) OF BUYER(S)", col_span=0.5, field_type="signature"),
@@ -701,6 +707,9 @@ def _transfer_variants(tag: str = "transfer") -> list[BlockVariant]:
                 RowDef([FieldDef(f"{tag}_odometer", "MILES (NO TENTHS)")]),
                 RowDef([FieldDef(f"{tag}_odom_check1",
                         "[ ] EXCEEDS MECHANICAL LIMITS  [ ] ODOMETER DISCREPANCY  [ ] EXEMPT",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef(f"{tag}_gift_check",
+                        "[ ] GIFT TRANSFER — No monetary consideration was exchanged for this vehicle.",
                         style=FieldStyle.LABEL_ONLY)]),
                 RowDef([
                     FieldDef(f"{tag}_seller_sig", "SELLER SIGNATURE", col_span=0.5, field_type="signature"),
@@ -894,6 +903,14 @@ def _notary_variants(tag: str = "notary") -> list[BlockVariant]:
                 RowDef([FieldDef(f"{tag}_seal_area",
                         "[NOTARY SEAL / STAMP]",
                         style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef(f"{tag}_witness1_sig", "WITNESS 1 SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_witness1_print", "WITNESS 1 PRINTED NAME", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef(f"{tag}_witness2_sig", "WITNESS 2 SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef(f"{tag}_witness2_print", "WITNESS 2 PRINTED NAME", col_span=0.5),
+                ]),
             ],
         ),
         BlockVariant(
@@ -967,6 +984,180 @@ def _damage_disclosure_variants() -> list[BlockVariant]:
     ]
 
 
+def _vin_verification_variants() -> list[BlockVariant]:
+    """VIN verification / inspection block. Required in FL, CA, CO, NH."""
+    return [
+        BlockVariant(
+            block_type=BlockType.VIN_VERIFICATION,
+            variant_id="vin_verify_v1",
+            title="VIN VERIFICATION",
+            title_style="banner",
+            height_weight=2.0,
+            rows=[
+                RowDef([FieldDef("vin_verify_label",
+                        "THE VEHICLE IDENTIFICATION NUMBER (VIN) HAS BEEN PHYSICALLY INSPECTED AND VERIFIED.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("vin_verify_vin", "VIN AS INSPECTED")]),
+                RowDef([
+                    FieldDef("vin_verify_location", "LOCATION OF VIN ON VEHICLE", col_span=0.5),
+                    FieldDef("vin_verify_date", "DATE OF INSPECTION", col_span=0.5, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef("vin_verify_inspector_sig", "INSPECTOR SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef("vin_verify_badge", "BADGE / ID NUMBER", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef("vin_verify_inspector_name", "INSPECTOR PRINTED NAME", col_span=0.5),
+                    FieldDef("vin_verify_agency", "AGENCY / ORGANIZATION", col_span=0.5),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.VIN_VERIFICATION,
+            variant_id="vin_verify_v2",
+            title="VEHICLE IDENTIFICATION NUMBER INSPECTION",
+            title_style="left",
+            height_weight=1.8,
+            rows=[
+                RowDef([FieldDef("vin_verify_label",
+                        "I certify that I have physically examined the vehicle described herein and the VIN "
+                        "shown is the VIN assigned to the vehicle.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef("vin_verify_vin", "VEHICLE IDENTIFICATION NUMBER", col_span=0.6),
+                    FieldDef("vin_verify_date", "DATE", col_span=0.4, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef("vin_verify_inspector_sig", "AUTHORIZED AGENT SIGNATURE", col_span=0.6, field_type="signature"),
+                    FieldDef("vin_verify_badge", "BADGE / CERT. NO.", col_span=0.4),
+                ]),
+                RowDef([FieldDef("vin_verify_agency", "AGENCY NAME AND ADDRESS")]),
+            ],
+        ),
+    ]
+
+
+def _power_of_attorney_variants() -> list[BlockVariant]:
+    """Power of attorney section. Used in TX, NC, CA, OR for title transfers."""
+    return [
+        BlockVariant(
+            block_type=BlockType.POWER_OF_ATTORNEY,
+            variant_id="poa_v1",
+            title="POWER OF ATTORNEY",
+            title_style="banner",
+            height_weight=2.2,
+            rows=[
+                RowDef([FieldDef("poa_preamble",
+                        "I/We hereby appoint the following individual as my/our attorney-in-fact to execute "
+                        "and deliver all documents necessary to transfer title to the vehicle described herein.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("poa_attorney_name", "NAME OF ATTORNEY-IN-FACT")]),
+                RowDef([FieldDef("poa_attorney_address", "ADDRESS OF ATTORNEY-IN-FACT")]),
+                RowDef([
+                    FieldDef("poa_grantor_sig", "SIGNATURE OF VEHICLE OWNER", col_span=0.5, field_type="signature"),
+                    FieldDef("poa_date", "DATE", col_span=0.5, field_type="date"),
+                ]),
+                RowDef([
+                    FieldDef("poa_grantor_print", "PRINTED NAME OF OWNER", col_span=0.5),
+                    FieldDef("poa_grantor_dl", "OWNER DL / ID NO.", col_span=0.5),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.POWER_OF_ATTORNEY,
+            variant_id="poa_v2",
+            title="SECURE POWER OF ATTORNEY",
+            title_style="left",
+            height_weight=2.5,
+            rows=[
+                RowDef([FieldDef("poa_preamble",
+                        "I/We authorize the person named below to act on my/our behalf to sign all forms "
+                        "necessary to transfer ownership of the motor vehicle described on the face of this title.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([FieldDef("poa_vin_label",
+                        "THIS POWER OF ATTORNEY IS ONLY VALID FOR THE VIN LISTED ON THIS TITLE.",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef("poa_attorney_name", "ATTORNEY-IN-FACT NAME", col_span=0.6),
+                    FieldDef("poa_attorney_dl", "ATTORNEY DL / ID NO.", col_span=0.4),
+                ]),
+                RowDef([FieldDef("poa_attorney_address", "ATTORNEY ADDRESS")]),
+                RowDef([
+                    FieldDef("poa_grantor_sig", "OWNER SIGNATURE", col_span=0.5, field_type="signature"),
+                    FieldDef("poa_co_grantor_sig", "CO-OWNER SIGNATURE", col_span=0.5, field_type="signature"),
+                ]),
+                RowDef([
+                    FieldDef("poa_grantor_print", "OWNER PRINTED NAME", col_span=0.5),
+                    FieldDef("poa_co_grantor_print", "CO-OWNER PRINTED NAME", col_span=0.5),
+                ]),
+                RowDef([FieldDef("poa_date", "DATE SIGNED", field_type="date")]),
+            ],
+        ),
+    ]
+
+
+def _tax_fee_variants() -> list[BlockVariant]:
+    """Tax / fee section. Used in PA, CT, IN and other states."""
+    return [
+        BlockVariant(
+            block_type=BlockType.TAX_FEE,
+            variant_id="tax_fee_v1",
+            title="TAX AND FEE INFORMATION",
+            title_style="left",
+            height_weight=1.5,
+            rows=[
+                RowDef([
+                    FieldDef("tax_purchase_price", "PURCHASE PRICE $", col_span=0.5),
+                    FieldDef("tax_trade_in", "TRADE-IN ALLOWANCE $", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef("tax_net_price", "NET PURCHASE PRICE $", col_span=0.5),
+                    FieldDef("tax_rate", "TAX RATE %", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef("tax_sales_tax", "SALES / USE TAX $", col_span=0.5),
+                    FieldDef("tax_title_fee", "TITLE FEE $", col_span=0.5),
+                ]),
+                RowDef([
+                    FieldDef("tax_registration_fee", "REGISTRATION FEE $", col_span=0.5),
+                    FieldDef("tax_total", "TOTAL FEES $", col_span=0.5),
+                ]),
+            ],
+        ),
+        BlockVariant(
+            block_type=BlockType.TAX_FEE,
+            variant_id="tax_fee_v2",
+            title="FEES AND TAXES",
+            title_style="banner",
+            height_weight=1.8,
+            rows=[
+                RowDef([FieldDef("tax_label",
+                        "FOR OFFICIAL USE ONLY — TO BE COMPLETED BY THE ISSUING AUTHORITY",
+                        style=FieldStyle.LABEL_ONLY)]),
+                RowDef([
+                    FieldDef("tax_purchase_price", "SALE PRICE $", col_span=0.33),
+                    FieldDef("tax_trade_in", "TRADE-IN $", col_span=0.33),
+                    FieldDef("tax_net_price", "TAXABLE AMOUNT $", col_span=0.34),
+                ]),
+                RowDef([
+                    FieldDef("tax_sales_tax", "STATE TAX $", col_span=0.33),
+                    FieldDef("tax_local_tax", "LOCAL TAX $", col_span=0.33),
+                    FieldDef("tax_total_tax", "TOTAL TAX $", col_span=0.34),
+                ]),
+                RowDef([
+                    FieldDef("tax_title_fee", "TITLE FEE $", col_span=0.33),
+                    FieldDef("tax_registration_fee", "REG. FEE $", col_span=0.33),
+                    FieldDef("tax_total", "TOTAL DUE $", col_span=0.34),
+                ]),
+                RowDef([
+                    FieldDef("tax_receipt_no", "RECEIPT NUMBER", col_span=0.5),
+                    FieldDef("tax_date_paid", "DATE PAID", col_span=0.5, field_type="date"),
+                ]),
+            ],
+        ),
+    ]
+
+
 def _back_legal_variants() -> list[BlockVariant]:
     return [
         BlockVariant(
@@ -1028,6 +1219,9 @@ VARIANT_POOL: dict[BlockType, list[BlockVariant]] = {
     BlockType.DEALER_REASSIGNMENT: [],  # built dynamically with ordinal
     BlockType.NOTARY: [],  # built dynamically with tag
     BlockType.DAMAGE_DISCLOSURE: _damage_disclosure_variants(),
+    BlockType.VIN_VERIFICATION: _vin_verification_variants(),
+    BlockType.POWER_OF_ATTORNEY: _power_of_attorney_variants(),
+    BlockType.TAX_FEE: _tax_fee_variants(),
     BlockType.BACK_LEGAL: _back_legal_variants(),
 }
 
@@ -1142,6 +1336,9 @@ def build_random_back_layout(
     # Decide which optional sections to include
     include_notary = rng.random() < 0.4        # ~40% of states require notary
     include_damage = rng.random() < 0.3        # ~30% of states have damage disclosure
+    include_vin_verify = rng.random() < 0.25   # ~25% of states (FL, CA, CO, NH)
+    include_poa = rng.random() < 0.20          # ~20% of states (TX, NC, CA, OR)
+    include_tax_fee = rng.random() < 0.25      # ~25% of states (PA, CT, IN)
 
     # Build the block order dynamically
     block_order: list[BlockType] = [BlockType.BACK_WARNING, BlockType.TRANSFER]
@@ -1149,8 +1346,14 @@ def build_random_back_layout(
         block_order.append(BlockType.NOTARY)
     if include_damage:
         block_order.append(BlockType.DAMAGE_DISCLOSURE)
+    if include_poa:
+        block_order.append(BlockType.POWER_OF_ATTORNEY)
     block_order.append(BlockType.DEALER_REASSIGNMENT)  # first
     block_order.append(BlockType.DEALER_REASSIGNMENT)  # second
+    if include_vin_verify:
+        block_order.append(BlockType.VIN_VERIFICATION)
+    if include_tax_fee:
+        block_order.append(BlockType.TAX_FEE)
     block_order.append(BlockType.BACK_LEGAL)
 
     blocks: list[BlockVariant] = []
@@ -1177,6 +1380,9 @@ def build_random_back_layout(
         elif block_type == BlockType.NOTARY:
             variants = _notary_variants("notary")
             variant = rng.choice(variants)
+        elif block_type in (BlockType.VIN_VERIFICATION, BlockType.POWER_OF_ATTORNEY, BlockType.TAX_FEE):
+            pool = VARIANT_POOL[block_type]
+            variant = rng.choice(pool)
         else:
             pool = VARIANT_POOL[block_type]
             variant = rng.choice(pool)

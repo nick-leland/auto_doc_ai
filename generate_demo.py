@@ -22,12 +22,19 @@ from src.utils.background_generation import (
 from src.utils.border_text import render_border_text
 from src.utils.state_insignia import add_state_insignia
 
-# --- Test data (front — works for any state, field names are generic) ---
+# --- Load all field values (front + back are in the same file now) ---
 with open("test_title.json") as f:
-    front_values = json.load(f)
+    all_values = json.load(f)
+
+# Strip _comment keys used for documentation in the JSON
+all_values = {k: v for k, v in all_values.items() if not k.startswith("_comment")}
+
+# Split into front/back for the large (Rhode Island) doc
+front_values = all_values
+back_values = all_values  # fill_values only uses fields that exist in the layout
 
 # Texas-specific overrides for the small doc
-texas_front_values = dict(front_values)
+texas_front_values = dict(all_values)
 texas_front_values.update({
     "title_no": "TX-2024-1193847",
     "owner_address": "4210 BLUEBONNET LN, AUSTIN TX 78704",
@@ -35,59 +42,14 @@ texas_front_values.update({
     "owner_city": "AUSTIN",
     "owner_state": "TX",
     "owner_zip": "78704",
+    "county": "TRAVIS",
+    "plate_no": "TX-LBJ42",
     "first_lien_address": "PO BOX 650000, DALLAS TX 75265",
+    "vin_verify_agency": "TRAVIS COUNTY SHERIFF DEPT",
+    "poa_attorney_address": "100 CONGRESS AVE STE 200, AUSTIN TX 78701",
 })
 
-# --- Test data (back) ---
-back_values = {
-    "transfer_buyer_name": "DAVID A MARTINEZ",
-    "transfer_buyer_address": "88 OAK AVENUE, CRANSTON RI 02920",
-    "transfer_new_lien": "NONE",
-    "transfer_new_lien_date": "",
-    "transfer_new_lien_address": "",
-    "transfer_odometer": "52140",
-    "transfer_seller_sig": "Michael R. Johnson",
-    "transfer_buyer_sig": "David A. Martinez",
-    "transfer_seller_print": "MICHAEL R JOHNSON",
-    "transfer_buyer_print": "DAVID A MARTINEZ",
-    "transfer_date": "03/01/2025",
-
-    "dealer_first_buyer_name": "JAMES T WILSON",
-    "dealer_first_buyer_address": "204 PINE ST, WARWICK RI 02886",
-    "dealer_first_new_lien": "ALLY FINANCIAL",
-    "dealer_first_new_lien_date": "03/10/2025",
-    "dealer_first_new_lien_address": "PO BOX 951, HORSHAM PA 19044",
-    "dealer_first_odometer": "52305",
-    "dealer_first_dealer_name": "RHODE ISLAND AUTO GROUP",
-    "dealer_first_dealer_license": "DLR-4821",
-    "dealer_first_dealer_address": "500 POST RD",
-    "dealer_first_dealer_city": "WARWICK",
-    "dealer_first_dealer_state": "RI",
-    "dealer_first_date": "03/10/2025",
-    "dealer_first_agent_sig": "Frank Pellegrino",
-    "dealer_first_buyer_sig": "James T. Wilson",
-    "dealer_first_agent_print": "FRANK PELLEGRINO",
-    "dealer_first_buyer_print": "JAMES T WILSON",
-
-    "dealer_second_buyer_name": "LINDA K CHEN",
-    "dealer_second_buyer_address": "77 ELM STREET, EAST PROVIDENCE RI 02914",
-    "dealer_second_new_lien": "NONE",
-    "dealer_second_new_lien_date": "",
-    "dealer_second_new_lien_address": "",
-    "dealer_second_odometer": "53891",
-    "dealer_second_dealer_name": "EAST BAY MOTORS LLC",
-    "dealer_second_dealer_license": "DLR-7103",
-    "dealer_second_dealer_address": "1200 WARREN AVE",
-    "dealer_second_dealer_city": "EAST PROVIDENCE",
-    "dealer_second_dealer_state": "RI",
-    "dealer_second_date": "04/15/2025",
-    "dealer_second_agent_sig": "Nancy Oliveira",
-    "dealer_second_buyer_sig": "Linda K. Chen",
-    "dealer_second_agent_print": "NANCY OLIVEIRA",
-    "dealer_second_buyer_print": "LINDA K CHEN",
-}
-
-texas_back_values = dict(back_values)
+texas_back_values = dict(all_values)
 texas_back_values.update({
     "transfer_buyer_address": "1502 CONGRESS AVE, AUSTIN TX 78701",
     "dealer_first_buyer_address": "910 LAMAR BLVD, AUSTIN TX 78703",

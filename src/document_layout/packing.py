@@ -15,12 +15,12 @@ from .cells import BlockVariant, DocumentLayout, FieldDef, FieldStyle, RowDef
 # Layout constants (all relative to font_size)
 # ---------------------------------------------------------------------------
 
-ROW_HEIGHT_FACTOR = 2.5       # each row = 2.5× font_size (label + value + pad)
-TITLE_HEIGHT_FACTOR = 1.8     # section title row
-BLOCK_GAP_FACTOR = 0.8        # vertical gap between blocks
+ROW_HEIGHT_FACTOR = 2.0       # each row = 2.0× font_size (label + value + pad)
+TITLE_HEIGHT_FACTOR = 1.5     # section title row
+BLOCK_GAP_FACTOR = 0.6        # vertical gap between blocks
 PADDING_X_FACTOR = 0.5        # horizontal inset from content rect edges
 FIELD_GAP_FACTOR = 0.3        # horizontal gap between fields in a row
-LABEL_FONT_RATIO = 0.55       # label text size relative to base font_size
+LABEL_FONT_RATIO = 0.70       # label text size relative to base font_size
 HEADER_FONT_RATIO = 1.6       # header LABEL_ONLY text relative to base font_size
 
 
