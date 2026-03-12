@@ -15,6 +15,8 @@ const state = {
   selectedToken: -1,
   selectedTokens: [],
   rotation: 0,
+  addBoxMode: false,
+  draftBoxStart: null,
 };
 
 const imageList = document.getElementById("image-list");
@@ -22,11 +24,14 @@ const imageStage = document.getElementById("image-stage");
 const transformLayer = document.getElementById("transform-layer");
 const pageImage = document.getElementById("page-image");
 const boxLayer = document.getElementById("box-layer");
+const drawLayer = document.getElementById("draw-layer");
+const draftBox = document.getElementById("draft-box");
 const tokenText = document.getElementById("token-text");
 const tokenLabel = document.getElementById("token-label");
 const tokenBBox = document.getElementById("token-bbox");
 const statusText = document.getElementById("status-text");
 const showOLabels = document.getElementById("show-o-labels");
+const addBoxButton = document.getElementById("toggle-add-box");
 
 function setStatus(text) {
   statusText.textContent = text;
@@ -53,6 +58,9 @@ function renderImageList() {
 }
 
 function labelClass(label) {
+  if (!label) {
+    return "label-UNLABELED";
+  }
   return `label-${label.replace(/[^A-Z-]/g, "")}`;
 }
 
@@ -84,6 +92,16 @@ function updateStageTransform() {
   transformLayer.style.transform = transform;
 }
 
+function updateAddBoxUI() {
+  imageStage.classList.toggle("add-box-mode", state.addBoxMode);
+  addBoxButton.classList.toggle("active-tool", state.addBoxMode);
+  addBoxButton.textContent = state.addBoxMode ? "Cancel Add Box" : "Add Box";
+}
+
+function hideDraftBox() {
+  draftBox.classList.add("hidden");
+}
+
 function renderBoxes() {
   boxLayer.innerHTML = "";
   if (!state.currentDoc) return;
@@ -102,7 +120,7 @@ function renderBoxes() {
     box.style.top = `${(y1 / 1000) * height}px`;
     box.style.width = `${((x2 - x1) / 1000) * width}px`;
     box.style.height = `${((y2 - y1) / 1000) * height}px`;
-    box.title = `${token.text} | ${token.label}`;
+    box.title = `${token.text} | ${token.label || "(unlabeled)"}`;
     box.addEventListener("click", (event) => selectToken(index, event));
     boxLayer.appendChild(box);
   });
@@ -132,7 +150,7 @@ function selectToken(index, event = null) {
   state.selectedToken = state.selectedTokens.includes(index) ? index : getOrderedSelection()[0];
   const token = state.currentDoc.tokens[state.selectedToken];
   tokenText.value = token.text;
-  tokenLabel.value = token.label;
+  tokenLabel.value = token.label || "";
   tokenBBox.value = token.bbox.join(", ");
   renderBoxes();
 }
@@ -155,9 +173,77 @@ function clearSelection() {
   state.selectedToken = -1;
   state.selectedTokens = [];
   tokenText.value = "";
-  tokenLabel.value = "O";
+  tokenLabel.value = "";
   tokenBBox.value = "";
   renderBoxes();
+}
+
+function bboxEquals(left, right) {
+  return Array.isArray(left)
+    && Array.isArray(right)
+    && left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
+function makeSeedRef(text, bbox) {
+  return `${text}::${bbox.join(",")}`;
+}
+
+function getTokenSeedRefs(token) {
+  if (Array.isArray(token.seed_refs) && token.seed_refs.length) {
+    return token.seed_refs;
+  }
+  if (token.seed_text && Array.isArray(token.seed_bbox)) {
+    return [makeSeedRef(token.seed_text, token.seed_bbox)];
+  }
+  if (token.source === "ocr" && token.text && Array.isArray(token.bbox)) {
+    return [makeSeedRef(token.text, token.bbox)];
+  }
+  return [];
+}
+
+function isTokenModified(token) {
+  if (token.source === "manual" || token.source === "merged") {
+    return true;
+  }
+  if ((token.label || "") !== "") {
+    return true;
+  }
+  if (token.seed_text !== undefined && token.text !== token.seed_text) {
+    return true;
+  }
+  if (Array.isArray(token.seed_bbox) && !bboxEquals(token.bbox, token.seed_bbox)) {
+    return true;
+  }
+  return false;
+}
+
+function mergeReloadedOCR(existingDoc, freshDoc) {
+  const ignoredRefs = new Set(existingDoc.ignored_ocr_refs || []);
+  const preservedTokens = existingDoc.tokens.filter((token) => isTokenModified(token));
+  preservedTokens.forEach((token) => {
+    getTokenSeedRefs(token).forEach((ref) => ignoredRefs.add(ref));
+  });
+  const freshTokens = freshDoc.tokens.filter((token) => {
+    const refs = getTokenSeedRefs(token);
+    return !refs.some((ref) => ignoredRefs.has(ref));
+  });
+  return {
+    ...freshDoc,
+    rotation: existingDoc.rotation,
+    ignored_ocr_refs: Array.from(ignoredRefs),
+    tokens: [...preservedTokens, ...freshTokens],
+  };
+}
+
+function toggleAddBoxMode(forceValue = null) {
+  state.addBoxMode = forceValue ?? !state.addBoxMode;
+  state.draftBoxStart = null;
+  hideDraftBox();
+  updateAddBoxUI();
+  if (state.addBoxMode) {
+    setStatus("Add-box mode enabled: click the first corner of the new token box");
+  }
 }
 
 function clamp(value, min, max) {
@@ -179,6 +265,68 @@ function normalizeBBox(bbox) {
     y1 = clamp(y2 - 1, 0, 999);
   }
   return [x1, y1, x2, y2];
+}
+
+function getViewPointFromClient(clientX, clientY) {
+  const rect = imageStage.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return null;
+  }
+  return {
+    x: clamp((clientX - rect.left) / rect.width, 0, 1),
+    y: clamp((clientY - rect.top) / rect.height, 0, 1),
+  };
+}
+
+function viewPointToDocument(point) {
+  switch (state.rotation) {
+    case 90:
+      return { x: point.y, y: 1 - point.x };
+    case 180:
+      return { x: 1 - point.x, y: 1 - point.y };
+    case 270:
+      return { x: 1 - point.y, y: point.x };
+    default:
+      return point;
+  }
+}
+
+function renderDraftBox(start, end) {
+  const rect = imageStage.getBoundingClientRect();
+  const left = Math.min(start.x, end.x) * rect.width;
+  const top = Math.min(start.y, end.y) * rect.height;
+  const width = Math.abs(end.x - start.x) * rect.width;
+  const height = Math.abs(end.y - start.y) * rect.height;
+  draftBox.style.left = `${left}px`;
+  draftBox.style.top = `${top}px`;
+  draftBox.style.width = `${width}px`;
+  draftBox.style.height = `${height}px`;
+  draftBox.classList.remove("hidden");
+}
+
+function createTokenFromDraft(start, end) {
+  if (!state.currentDoc) {
+    return;
+  }
+  const startDoc = viewPointToDocument(start);
+  const endDoc = viewPointToDocument(end);
+  const bbox = normalizeBBox([
+    Math.round(Math.min(startDoc.x, endDoc.x) * 1000),
+    Math.round(Math.min(startDoc.y, endDoc.y) * 1000),
+    Math.round(Math.max(startDoc.x, endDoc.x) * 1000),
+    Math.round(Math.max(startDoc.y, endDoc.y) * 1000),
+  ]);
+  const newToken = {
+    text: "",
+    bbox,
+    label: tokenLabel.value || "",
+    source: "manual",
+    seed_refs: [],
+  };
+  state.currentDoc.tokens.push(newToken);
+  selectToken(state.currentDoc.tokens.length - 1);
+  tokenText.focus();
+  setStatus("Added new token box");
 }
 
 function updateBBoxField() {
@@ -273,6 +421,13 @@ function mapViewResizeToDocument(key, step) {
 function deleteSelectedToken() {
   if (!state.selectedTokens.length || !state.currentDoc) return;
   const toDelete = new Set(state.selectedTokens);
+  const ignoredRefs = new Set(state.currentDoc.ignored_ocr_refs || []);
+  state.currentDoc.tokens.forEach((token, index) => {
+    if (toDelete.has(index)) {
+      getTokenSeedRefs(token).forEach((ref) => ignoredRefs.add(ref));
+    }
+  });
+  state.currentDoc.ignored_ocr_refs = Array.from(ignoredRefs);
   state.currentDoc.tokens = state.currentDoc.tokens.filter((_, index) => !toDelete.has(index));
   clearSelection();
   setStatus(`Deleted ${toDelete.size} token${toDelete.size === 1 ? "" : "s"}`);
@@ -304,6 +459,8 @@ function mergeSelectedTokens() {
       Math.max(...selected.map((token) => token.bbox[3])),
     ],
     label: labels.size === 1 ? selected[0].label : tokenLabel.value,
+    source: "merged",
+    seed_refs: selected.flatMap((token) => getTokenSeedRefs(token)),
   };
   const mergeIndexes = new Set(orderedIndexes);
   const insertAt = orderedIndexes[0];
@@ -320,7 +477,7 @@ function mergeSelectedTokens() {
   state.selectedTokens = [insertAt];
   state.selectedToken = insertAt;
   tokenText.value = mergedToken.text;
-  tokenLabel.value = mergedToken.label;
+  tokenLabel.value = mergedToken.label || "";
   tokenBBox.value = mergedToken.bbox.join(", ");
   renderBoxes();
   setStatus(`Merged ${orderedIndexes.length} tokens`);
@@ -341,8 +498,16 @@ async function loadImage(index, forceReload) {
   pageImage.onload = () => renderBoxes();
   pageImage.src = `/api/image/${encodeURIComponent(image.name)}?ts=${Date.now()}`;
   const suffix = forceReload ? `?reload=1&rotation=${state.rotation}` : "";
-  state.currentDoc = await fetchJson(`/api/label/${encodeURIComponent(image.name)}${suffix}`);
-  state.rotation = Number(state.currentDoc.rotation || 0) % 360;
+  const nextDoc = await fetchJson(`/api/label/${encodeURIComponent(image.name)}${suffix}`);
+  state.currentDoc = forceReload && state.currentDoc
+    ? mergeReloadedOCR(state.currentDoc, nextDoc)
+    : nextDoc;
+  const hasSavedRotation = Object.prototype.hasOwnProperty.call(state.currentDoc, "rotation");
+  if (hasSavedRotation) {
+    state.rotation = Number(state.currentDoc.rotation || 0) % 360;
+  } else if (!forceReload) {
+    state.rotation = 0;
+  }
   clearSelection();
   setStatus(forceReload ? `Reloaded OCR for ${image.name} at ${state.rotation}°` : `Loaded ${image.name}`);
 }
@@ -351,6 +516,7 @@ async function saveCurrent() {
   if (!state.currentDoc || state.currentIndex < 0) return;
   syncSelectedToken();
   state.currentDoc.rotation = state.rotation;
+  state.currentDoc.ignored_ocr_refs = state.currentDoc.ignored_ocr_refs || [];
   const image = state.images[state.currentIndex];
   await fetchJson(`/api/label/${encodeURIComponent(image.name)}`, {
     method: "POST",
@@ -379,7 +545,49 @@ function rotate(delta) {
   setStatus(`Rotation ${state.rotation}\u00b0`);
 }
 
+function handleStageClick(event) {
+  if (!state.addBoxMode || !state.currentDoc) {
+    return;
+  }
+  if (event.target.closest(".token-box")) {
+    return;
+  }
+  const point = getViewPointFromClient(event.clientX, event.clientY);
+  if (!point) {
+    return;
+  }
+  if (!state.draftBoxStart) {
+    state.draftBoxStart = point;
+    renderDraftBox(point, point);
+    setStatus("Add-box mode: click the opposite corner to finish the box");
+    return;
+  }
+  const start = state.draftBoxStart;
+  state.draftBoxStart = null;
+  hideDraftBox();
+  const rect = imageStage.getBoundingClientRect();
+  const width = Math.abs(point.x - start.x) * rect.width;
+  const height = Math.abs(point.y - start.y) * rect.height;
+  if (width < 6 || height < 6) {
+    setStatus("Add-box canceled: click two corners farther apart");
+    return;
+  }
+  createTokenFromDraft(start, point);
+}
+
+function handlePointerMove(event) {
+  if (!state.addBoxMode || !state.draftBoxStart) {
+    return;
+  }
+  const point = getViewPointFromClient(event.clientX, event.clientY);
+  if (!point) {
+    return;
+  }
+  renderDraftBox(state.draftBoxStart, point);
+}
+
 document.getElementById("refresh-images").addEventListener("click", loadImages);
+document.getElementById("toggle-add-box").addEventListener("click", () => toggleAddBoxMode());
 document.getElementById("save-labels").addEventListener("click", saveCurrent);
 document.getElementById("merge-tokens").addEventListener("click", mergeSelectedTokens);
 document.getElementById("delete-token").addEventListener("click", deleteSelectedToken);
@@ -391,10 +599,22 @@ document.getElementById("rotate-right").addEventListener("click", () => rotate(9
 tokenText.addEventListener("input", syncSelectedToken);
 tokenLabel.addEventListener("change", syncSelectedToken);
 showOLabels.addEventListener("change", renderBoxes);
+imageStage.addEventListener("click", handleStageClick);
+window.addEventListener("pointermove", handlePointerMove);
 
 document.addEventListener("keydown", (event) => {
   const editingField = document.activeElement === tokenText || document.activeElement === tokenLabel;
+  if (!editingField && event.key === "Escape" && state.addBoxMode) {
+    toggleAddBoxMode(false);
+    setStatus("Add-box mode disabled");
+    return;
+  }
   if (editingField) {
+    return;
+  }
+  if (event.key.toLowerCase() === "n") {
+    event.preventDefault();
+    toggleAddBoxMode();
     return;
   }
   const step = event.altKey ? 10 : 2;

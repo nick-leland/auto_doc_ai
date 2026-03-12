@@ -1,14 +1,18 @@
+html,
 body {
+  height: 100%;
   margin: 0;
   font-family: sans-serif;
   background: #f4f1ea;
   color: #1f1b18;
+  overflow: hidden;
 }
 
 .layout {
   display: grid;
   grid-template-columns: 260px 1fr 280px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar,
@@ -16,12 +20,17 @@ body {
   background: #fffdf8;
   border-right: 1px solid #d8d1c5;
   padding: 16px;
+  min-height: 0;
+}
+
+.sidebar {
   overflow: auto;
 }
 
 .details-panel {
   border-left: 1px solid #d8d1c5;
   border-right: 0;
+  overflow: hidden;
 }
 
 .sidebar-header,
@@ -65,6 +74,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .toolbar {
@@ -74,6 +84,8 @@ body {
 }
 
 .viewer {
+  flex: 1;
+  min-height: 0;
   padding: 16px;
   overflow: auto;
 }
@@ -84,6 +96,10 @@ body {
   background: #fff;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   overflow: visible;
+}
+
+.image-stage.add-box-mode {
+  cursor: crosshair;
 }
 
 .transform-layer {
@@ -103,6 +119,12 @@ body {
   pointer-events: none;
 }
 
+.draw-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .token-box {
   position: absolute;
   border: 2px solid;
@@ -117,6 +139,23 @@ body {
   z-index: 2;
 }
 
+.draft-box {
+  position: absolute;
+  border: 2px dashed #ad4e1a;
+  background: rgba(173, 78, 26, 0.12);
+  box-sizing: border-box;
+}
+
+.hidden {
+  display: none;
+}
+
+button.active-tool {
+  border-color: #ad4e1a;
+  background: #fff2e8;
+}
+
+.label-UNLABELED { border-color: #4f86c6; }
 .label-O { border-color: #999; }
 .label-B-HEADER, .label-I-HEADER { border-color: #9257d7; }
 .label-B-QUESTION, .label-I-QUESTION { border-color: #d9902b; }

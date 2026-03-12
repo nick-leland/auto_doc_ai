@@ -21,6 +21,7 @@
           <button id="next-image">Next</button>
           <button id="rotate-left">Rotate Left</button>
           <button id="rotate-right">Rotate Right</button>
+          <button id="toggle-add-box">Add Box</button>
           <button id="save-labels">Save</button>
           <button id="merge-tokens">Merge Tokens</button>
           <button id="delete-token">Delete Token</button>
@@ -37,6 +38,9 @@
               <img id="page-image" alt="Document page">
               <div id="box-layer" class="box-layer"></div>
             </div>
+            <div id="draw-layer" class="draw-layer">
+              <div id="draft-box" class="draft-box hidden"></div>
+            </div>
           </div>
         </div>
       </main>
@@ -49,6 +53,7 @@
         <div class="field">
           <label for="token-label">Label</label>
           <select id="token-label">
+            <option value="">(unlabeled)</option>
             <option>O</option>
             <option>B-HEADER</option>
             <option>I-HEADER</option>
@@ -63,7 +68,7 @@
           <input id="token-bbox" type="text" readonly>
         </div>
         <p class="hint">
-          Click a box to edit it. Ctrl-click or Cmd-click to multi-select for merges. Keyboard shortcuts: <code>1</code>-<code>7</code> assign labels, <code>Arrow Keys</code> move boxes, <code>Shift</code>+<code>Arrow Keys</code> expand boxes, <code>Ctrl</code>/<code>Cmd</code>+<code>Arrow Keys</code> shrink boxes, <code>Alt</code> makes box nudges larger, and arrow controls follow the current rotation. <code>s</code> saves, <code>m</code> merges, <code>[</code>/<code>]</code> switches pages, <code>q</code>/<code>e</code> rotates, <code>Delete</code> removes the selected token. <code>Reload OCR</code> reruns OCR using the current rotation, and <code>Save</code> preserves that rotation in the label file.
+          Click a box to edit it. Ctrl-click or Cmd-click to multi-select for merges. Use <code>Add Box</code> or <code>n</code>, then click two corners to create a token when OCR misses text. New OCR boxes start unlabeled. Keyboard shortcuts: <code>1</code>-<code>7</code> assign labels, <code>Arrow Keys</code> move boxes, <code>Shift</code>+<code>Arrow Keys</code> expand boxes, <code>Ctrl</code>/<code>Cmd</code>+<code>Arrow Keys</code> shrink boxes, <code>Alt</code> makes box nudges larger, and arrow controls follow the current rotation. <code>s</code> saves, <code>m</code> merges, <code>[</code>/<code>]</code> switches pages, <code>q</code>/<code>e</code> rotates, <code>Delete</code> removes the selected token, and <code>Esc</code> exits add-box mode. <code>Reload OCR</code> refreshes untouched OCR boxes but keeps edited, labeled, merged, deleted, and manually added tokens.
         </p>
       </aside>
     </div>

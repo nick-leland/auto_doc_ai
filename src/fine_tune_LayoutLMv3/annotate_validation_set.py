@@ -120,8 +120,17 @@ def build_default_label_doc(image_path: Path, rotation: int = 0) -> dict:
         "doc_id": image_path.stem,
         "image_size": list(image_size),
         "rotation": rotation,
+        "ignored_ocr_refs": [],
         "tokens": [
-            {"text": word, "bbox": box, "label": "O"}
+            {
+                "text": word,
+                "bbox": box,
+                "label": "",
+                "source": "ocr",
+                "seed_text": word,
+                "seed_bbox": box,
+                "seed_refs": [f"{word}::{','.join(str(v) for v in box)}"],
+            }
             for word, box in zip(words, boxes)
         ],
     }
@@ -130,17 +139,28 @@ def build_default_label_doc(image_path: Path, rotation: int = 0) -> dict:
 def build_editable_label_doc(label_path: Path, image_path: Path) -> dict:
     with open(label_path) as fh:
         payload = json.load(fh)
+    if "tokens" in payload:
+        with ImageSize(image_path) as image_size:
+            return {
+                "doc_id": payload.get("doc_id") or image_path.stem,
+                "image_size": list(payload.get("image_size") or image_size),
+                "rotation": int(payload.get("rotation", 0)) % 360,
+                "ignored_ocr_refs": payload.get("ignored_ocr_refs", []),
+                "tokens": payload.get("tokens", []),
+            }
     truth = load_truth_labeled_tokens(label_path, image_path=image_path)
     with ImageSize(image_path) as image_size:
         return {
             "doc_id": image_path.stem,
             "image_size": list(image_size),
             "rotation": int(payload.get("rotation", 0)) % 360,
+            "ignored_ocr_refs": payload.get("ignored_ocr_refs", []),
             "tokens": [
                 {
                     "text": word,
                     "bbox": bbox,
                     "label": label,
+                    "source": "imported",
                 }
                 for word, bbox, label in zip(
                     truth["words"],
@@ -284,6 +304,7 @@ def make_handler(data_dir: Path):
                     "doc_id": payload.get("doc_id") or image_path.stem,
                     "image_size": payload.get("image_size"),
                     "rotation": int(payload.get("rotation", 0)) % 360,
+                    "ignored_ocr_refs": payload.get("ignored_ocr_refs", []),
                     "tokens": payload.get("tokens", []),
                 }
                 label_path = labels_dir / f"{image_path.stem}.json"
