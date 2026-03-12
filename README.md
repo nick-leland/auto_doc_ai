@@ -62,6 +62,17 @@ Using a seeded synthetic split (`seed=42`) and the same held-out test pages thro
 
 This repo now includes local-only scripts for baseline evaluation, OCR-aware fine-tuning, single-page inference, and private real-world validation/annotation under `src/fine_tune_LayoutLMv3/`.
 
+## Real-World Title Example
+
+Single annotated real title page evaluated locally with the same `Tesseract -> LayoutLMv3` pipeline family used above. This is outside the synthetic dataset and is intended as a transfer check onto real document imagery.
+
+| Pipeline | Token Accuracy | Entity F1 | Seqeval F1 |
+|----------|----------------|-----------|------------|
+| Baseline `Tesseract -> LayoutLMv3` | `0.2653` | `0.2148` | `0.1986` |
+| Fine-tuned `Tesseract -> LayoutLMv3` | `0.4082` | `0.2992` | `0.2460` |
+
+On this real example, the fine-tuned model still improves over the baseline, but the OCR quality remains the main bottleneck.
+
 ## Quick Start
 
 ### Requirements
