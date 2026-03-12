@@ -38,6 +38,7 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .sidebar-header {
@@ -102,6 +103,14 @@ body {
   cursor: crosshair;
 }
 
+.image-stage.select-box-mode {
+  cursor: cell;
+}
+
+.image-stage.select-box-mode .token-box {
+  pointer-events: none;
+}
+
 .transform-layer {
   position: relative;
   transform-origin: top left;
@@ -109,8 +118,7 @@ body {
 
 #page-image {
   display: block;
-  max-width: 100%;
-  height: auto;
+  max-width: none;
 }
 
 .box-layer {
@@ -146,6 +154,13 @@ body {
   box-sizing: border-box;
 }
 
+.selection-box {
+  position: absolute;
+  border: 2px dashed #2e6fb4;
+  background: rgba(79, 134, 198, 0.12);
+  box-sizing: border-box;
+}
+
 .hidden {
   display: none;
 }
@@ -174,6 +189,11 @@ input, select, button {
 
 button {
   cursor: pointer;
+}
+
+#zoom-text {
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .hint {

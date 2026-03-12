@@ -15,6 +15,10 @@ const state = {
   selectedToken: -1,
   selectedTokens: [],
   rotation: 0,
+  zoom: 1,
+  selectBoxMode: false,
+  selectBoxStart: null,
+  selectBoxAppend: false,
   addBoxMode: false,
   draftBoxStart: null,
 };
@@ -26,11 +30,15 @@ const pageImage = document.getElementById("page-image");
 const boxLayer = document.getElementById("box-layer");
 const drawLayer = document.getElementById("draw-layer");
 const draftBox = document.getElementById("draft-box");
+const selectionBox = document.getElementById("selection-box");
+const viewer = document.getElementById("viewer");
 const tokenText = document.getElementById("token-text");
 const tokenLabel = document.getElementById("token-label");
 const tokenBBox = document.getElementById("token-bbox");
 const statusText = document.getElementById("status-text");
+const zoomText = document.getElementById("zoom-text");
 const showOLabels = document.getElementById("show-o-labels");
+const selectBoxButton = document.getElementById("toggle-select-box");
 const addBoxButton = document.getElementById("toggle-add-box");
 
 function setStatus(text) {
@@ -64,9 +72,30 @@ function labelClass(label) {
   return `label-${label.replace(/[^A-Z-]/g, "")}`;
 }
 
+function getDisplayImageSize() {
+  const naturalWidth = pageImage.naturalWidth || 0;
+  const naturalHeight = pageImage.naturalHeight || 0;
+  if (!naturalWidth || !naturalHeight) {
+    return { width: 0, height: 0 };
+  }
+
+  const rotatedWidth = state.rotation === 90 || state.rotation === 270 ? naturalHeight : naturalWidth;
+  const rotatedHeight = state.rotation === 90 || state.rotation === 270 ? naturalWidth : naturalHeight;
+  const fitScale = Math.min(
+    1,
+    viewer.clientWidth / Math.max(rotatedWidth, 1),
+    viewer.clientHeight / Math.max(rotatedHeight, 1),
+  );
+  const scale = Math.max(0.1, fitScale * state.zoom);
+
+  return {
+    width: naturalWidth * scale,
+    height: naturalHeight * scale,
+  };
+}
+
 function updateStageTransform() {
-  const width = pageImage.clientWidth;
-  const height = pageImage.clientHeight;
+  const { width, height } = getDisplayImageSize();
   if (!width || !height) return;
 
   let stageWidth = width;
@@ -85,6 +114,8 @@ function updateStageTransform() {
     transform = `translate(0px, ${width}px) rotate(270deg)`;
   }
 
+  pageImage.style.width = `${width}px`;
+  pageImage.style.height = `${height}px`;
   imageStage.style.width = `${stageWidth}px`;
   imageStage.style.height = `${stageHeight}px`;
   transformLayer.style.width = `${width}px`;
@@ -98,16 +129,31 @@ function updateAddBoxUI() {
   addBoxButton.textContent = state.addBoxMode ? "Cancel Add Box" : "Add Box";
 }
 
+function updateSelectBoxUI() {
+  imageStage.classList.toggle("select-box-mode", state.selectBoxMode);
+  selectBoxButton.classList.toggle("active-tool", state.selectBoxMode);
+  selectBoxButton.textContent = state.selectBoxMode ? "Cancel Box Select" : "Box Select";
+}
+
 function hideDraftBox() {
   draftBox.classList.add("hidden");
+}
+
+function hideSelectionBox() {
+  selectionBox.classList.add("hidden");
+}
+
+function updateZoomUI() {
+  zoomText.textContent = `${Math.round(state.zoom * 100)}%`;
 }
 
 function renderBoxes() {
   boxLayer.innerHTML = "";
   if (!state.currentDoc) return;
 
-  const width = pageImage.clientWidth;
-  const height = pageImage.clientHeight;
+  const { width, height } = getDisplayImageSize();
+  if (!width || !height) return;
+  updateStageTransform();
 
   state.currentDoc.tokens.forEach((token, index) => {
     if (!showOLabels.checked && token.label === "O") {
@@ -238,12 +284,47 @@ function mergeReloadedOCR(existingDoc, freshDoc) {
 
 function toggleAddBoxMode(forceValue = null) {
   state.addBoxMode = forceValue ?? !state.addBoxMode;
+  if (state.addBoxMode) {
+    state.selectBoxMode = false;
+    state.selectBoxStart = null;
+    state.selectBoxAppend = false;
+    hideSelectionBox();
+    updateSelectBoxUI();
+  }
   state.draftBoxStart = null;
   hideDraftBox();
   updateAddBoxUI();
   if (state.addBoxMode) {
     setStatus("Add-box mode enabled: click the first corner of the new token box");
   }
+}
+
+function toggleSelectBoxMode(forceValue = null) {
+  state.selectBoxMode = forceValue ?? !state.selectBoxMode;
+  if (state.selectBoxMode) {
+    state.addBoxMode = false;
+    state.draftBoxStart = null;
+    hideDraftBox();
+    updateAddBoxUI();
+  }
+  state.selectBoxStart = null;
+  state.selectBoxAppend = false;
+  hideSelectionBox();
+  updateSelectBoxUI();
+  if (state.selectBoxMode) {
+    setStatus("Box-select mode enabled: drag a rectangle to select multiple tokens");
+  }
+}
+
+function setZoom(nextZoom) {
+  state.zoom = clamp(nextZoom, 0.25, 6);
+  updateZoomUI();
+  renderBoxes();
+}
+
+function adjustZoom(delta) {
+  const nextZoom = Math.round((state.zoom + delta) * 100) / 100;
+  setZoom(nextZoom);
 }
 
 function clamp(value, min, max) {
@@ -291,6 +372,19 @@ function viewPointToDocument(point) {
   }
 }
 
+function documentPointToView(point) {
+  switch (state.rotation) {
+    case 90:
+      return { x: 1 - point.y, y: point.x };
+    case 180:
+      return { x: 1 - point.x, y: 1 - point.y };
+    case 270:
+      return { x: point.y, y: 1 - point.x };
+    default:
+      return point;
+  }
+}
+
 function renderDraftBox(start, end) {
   const rect = imageStage.getBoundingClientRect();
   const left = Math.min(start.x, end.x) * rect.width;
@@ -304,9 +398,22 @@ function renderDraftBox(start, end) {
   draftBox.classList.remove("hidden");
 }
 
+function renderSelectionBox(start, end) {
+  const rect = imageStage.getBoundingClientRect();
+  const left = Math.min(start.x, end.x) * rect.width;
+  const top = Math.min(start.y, end.y) * rect.height;
+  const width = Math.abs(end.x - start.x) * rect.width;
+  const height = Math.abs(end.y - start.y) * rect.height;
+  selectionBox.style.left = `${left}px`;
+  selectionBox.style.top = `${top}px`;
+  selectionBox.style.width = `${width}px`;
+  selectionBox.style.height = `${height}px`;
+  selectionBox.classList.remove("hidden");
+}
+
 function createTokenFromDraft(start, end) {
   if (!state.currentDoc) {
-    return;
+    return null;
   }
   const startDoc = viewPointToDocument(start);
   const endDoc = viewPointToDocument(end);
@@ -324,9 +431,101 @@ function createTokenFromDraft(start, end) {
     seed_refs: [],
   };
   state.currentDoc.tokens.push(newToken);
-  selectToken(state.currentDoc.tokens.length - 1);
+  const index = state.currentDoc.tokens.length - 1;
+  selectToken(index);
   tokenText.focus();
   setStatus("Added new token box");
+  return index;
+}
+
+async function runOCRForToken(index) {
+  if (!state.currentDoc || state.currentIndex < 0) {
+    return;
+  }
+  const image = state.images[state.currentIndex];
+  const token = state.currentDoc.tokens[index];
+  if (!image || !token) {
+    return;
+  }
+  try {
+    setStatus("Running OCR for new box...");
+    const payload = await fetchJson(`/api/ocr-box/${encodeURIComponent(image.name)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bbox: token.bbox,
+        rotation: state.rotation,
+      }),
+    });
+    if (!state.currentDoc.tokens[index]) {
+      return;
+    }
+    state.currentDoc.tokens[index].text = payload.text || "";
+    if (state.selectedToken === index) {
+      tokenText.value = state.currentDoc.tokens[index].text;
+    }
+    renderBoxes();
+    setStatus(payload.text ? "OCR filled new token text" : "OCR found no text in new box");
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+function tokenViewRect(token) {
+  const [x1, y1, x2, y2] = token.bbox;
+  const corners = [
+    documentPointToView({ x: x1 / 1000, y: y1 / 1000 }),
+    documentPointToView({ x: x2 / 1000, y: y1 / 1000 }),
+    documentPointToView({ x: x1 / 1000, y: y2 / 1000 }),
+    documentPointToView({ x: x2 / 1000, y: y2 / 1000 }),
+  ];
+  return {
+    left: Math.min(...corners.map((point) => point.x)),
+    top: Math.min(...corners.map((point) => point.y)),
+    right: Math.max(...corners.map((point) => point.x)),
+    bottom: Math.max(...corners.map((point) => point.y)),
+  };
+}
+
+function rectsIntersect(left, right) {
+  return !(
+    left.right < right.left
+    || left.left > right.right
+    || left.bottom < right.top
+    || left.top > right.bottom
+  );
+}
+
+function applyBoxSelection(start, end, appendSelection) {
+  if (!state.currentDoc) {
+    return;
+  }
+  const selectionRect = {
+    left: Math.min(start.x, end.x),
+    top: Math.min(start.y, end.y),
+    right: Math.max(start.x, end.x),
+    bottom: Math.max(start.y, end.y),
+  };
+  const selected = state.currentDoc.tokens
+    .map((token, index) => (rectsIntersect(tokenViewRect(token), selectionRect) ? index : null))
+    .filter((index) => index !== null);
+  const nextSelection = appendSelection
+    ? Array.from(new Set([...state.selectedTokens, ...selected]))
+    : selected;
+  state.selectedTokens = nextSelection;
+  state.selectedToken = nextSelection.length ? nextSelection[0] : -1;
+  if (state.selectedToken >= 0) {
+    const token = state.currentDoc.tokens[state.selectedToken];
+    tokenText.value = token.text;
+    tokenLabel.value = token.label || "";
+    tokenBBox.value = token.bbox.join(", ");
+  } else {
+    tokenText.value = "";
+    tokenLabel.value = "";
+    tokenBBox.value = "";
+  }
+  renderBoxes();
+  setStatus(`Selected ${nextSelection.length} token${nextSelection.length === 1 ? "" : "s"}`);
 }
 
 function updateBBoxField() {
@@ -508,6 +707,10 @@ async function loadImage(index, forceReload) {
   } else if (!forceReload) {
     state.rotation = 0;
   }
+  if (!forceReload) {
+    state.zoom = 1;
+    updateZoomUI();
+  }
   clearSelection();
   setStatus(forceReload ? `Reloaded OCR for ${image.name} at ${state.rotation}°` : `Loaded ${image.name}`);
 }
@@ -528,6 +731,28 @@ async function saveCurrent() {
   setStatus(`Saved ${image.name}`);
 }
 
+async function resetAnnotations() {
+  if (!state.currentDoc || state.currentIndex < 0) {
+    return;
+  }
+  const image = state.images[state.currentIndex];
+  const confirmed = window.confirm(
+    `Reset annotations for ${image.name}? This will discard manual edits, merges, deletes, labels, and added boxes for the current page.`,
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  const freshDoc = await fetchJson(
+    `/api/label/${encodeURIComponent(image.name)}?reload=1&rotation=${state.rotation}`,
+  );
+  state.currentDoc = freshDoc;
+  state.rotation = Number(state.currentDoc.rotation || state.rotation) % 360;
+  clearSelection();
+  await saveCurrent();
+  setStatus(`Reset annotations for ${image.name}`);
+}
+
 function moveImage(delta) {
   if (!state.images.length) return;
   const nextIndex = Math.max(0, Math.min(state.images.length - 1, state.currentIndex + delta));
@@ -545,7 +770,37 @@ function rotate(delta) {
   setStatus(`Rotation ${state.rotation}\u00b0`);
 }
 
-function handleStageClick(event) {
+async function handleStageClick(event) {
+  if (state.selectBoxMode && state.currentDoc) {
+    if (event.target.closest(".token-box")) {
+      return;
+    }
+    const point = getViewPointFromClient(event.clientX, event.clientY);
+    if (!point) {
+      return;
+    }
+    if (!state.selectBoxStart) {
+      state.selectBoxStart = point;
+      state.selectBoxAppend = event.ctrlKey || event.metaKey;
+      renderSelectionBox(point, point);
+      setStatus("Box-select mode: click the opposite corner to finish selection");
+      return;
+    }
+    const start = state.selectBoxStart;
+    const appendSelection = state.selectBoxAppend;
+    state.selectBoxStart = null;
+    state.selectBoxAppend = false;
+    hideSelectionBox();
+    const rect = imageStage.getBoundingClientRect();
+    const width = Math.abs(point.x - start.x) * rect.width;
+    const height = Math.abs(point.y - start.y) * rect.height;
+    if (width < 4 || height < 4) {
+      setStatus("Box-select canceled: click two corners farther apart");
+      return;
+    }
+    applyBoxSelection(start, point, appendSelection);
+    return;
+  }
   if (!state.addBoxMode || !state.currentDoc) {
     return;
   }
@@ -572,10 +827,21 @@ function handleStageClick(event) {
     setStatus("Add-box canceled: click two corners farther apart");
     return;
   }
-  createTokenFromDraft(start, point);
+  const index = createTokenFromDraft(start, point);
+  if (index !== null) {
+    await runOCRForToken(index);
+  }
 }
 
 function handlePointerMove(event) {
+  if (state.selectBoxMode && state.selectBoxStart) {
+    const point = getViewPointFromClient(event.clientX, event.clientY);
+    if (!point) {
+      return;
+    }
+    renderSelectionBox(state.selectBoxStart, point);
+    return;
+  }
   if (!state.addBoxMode || !state.draftBoxStart) {
     return;
   }
@@ -587,8 +853,13 @@ function handlePointerMove(event) {
 }
 
 document.getElementById("refresh-images").addEventListener("click", loadImages);
+document.getElementById("zoom-out").addEventListener("click", () => adjustZoom(-0.1));
+document.getElementById("zoom-in").addEventListener("click", () => adjustZoom(0.1));
+document.getElementById("zoom-reset").addEventListener("click", () => setZoom(1));
+document.getElementById("toggle-select-box").addEventListener("click", () => toggleSelectBoxMode());
 document.getElementById("toggle-add-box").addEventListener("click", () => toggleAddBoxMode());
 document.getElementById("save-labels").addEventListener("click", saveCurrent);
+document.getElementById("reset-annotations").addEventListener("click", resetAnnotations);
 document.getElementById("merge-tokens").addEventListener("click", mergeSelectedTokens);
 document.getElementById("delete-token").addEventListener("click", deleteSelectedToken);
 document.getElementById("reload-ocr").addEventListener("click", () => loadImage(state.currentIndex, true));
@@ -601,20 +872,42 @@ tokenLabel.addEventListener("change", syncSelectedToken);
 showOLabels.addEventListener("change", renderBoxes);
 imageStage.addEventListener("click", handleStageClick);
 window.addEventListener("pointermove", handlePointerMove);
+window.addEventListener("resize", renderBoxes);
 
 document.addEventListener("keydown", (event) => {
   const editingField = document.activeElement === tokenText || document.activeElement === tokenLabel;
-  if (!editingField && event.key === "Escape" && state.addBoxMode) {
+  if (!editingField && event.key === "Escape" && (state.addBoxMode || state.selectBoxMode)) {
     toggleAddBoxMode(false);
-    setStatus("Add-box mode disabled");
+    toggleSelectBoxMode(false);
+    setStatus("Tool mode disabled");
     return;
   }
   if (editingField) {
     return;
   }
+  if (event.key.toLowerCase() === "v") {
+    event.preventDefault();
+    toggleSelectBoxMode();
+    return;
+  }
   if (event.key.toLowerCase() === "n") {
     event.preventDefault();
     toggleAddBoxMode();
+    return;
+  }
+  if (event.key === "+" || event.key === "=") {
+    event.preventDefault();
+    adjustZoom(0.1);
+    return;
+  }
+  if (event.key === "-") {
+    event.preventDefault();
+    adjustZoom(-0.1);
+    return;
+  }
+  if (event.key === "0") {
+    event.preventDefault();
+    setZoom(1);
     return;
   }
   const step = event.altKey ? 10 : 2;
@@ -678,4 +971,5 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+updateZoomUI();
 loadImages().catch((error) => setStatus(error.message));

@@ -171,6 +171,24 @@ def build_editable_label_doc(label_path: Path, image_path: Path) -> dict:
         }
 
 
+def ocr_box_text(
+    image_path: Path,
+    bbox: list[int],
+    rotation: int = 0,
+) -> str:
+    import pytesseract
+    from PIL import Image
+
+    with Image.open(image_path) as image:
+        width, height = image.size
+        x1, y1, x2, y2 = denormalize_bbox(bbox, width, height)
+        crop = image.crop((x1, y1, x2, y2)).convert("RGB")
+        if rotation % 360 != 0:
+            crop = crop.rotate(-rotation, expand=True)
+        text = pytesseract.image_to_string(crop, config="--psm 6")
+    return " ".join(text.split())
+
+
 class ImageSize:
     def __init__(self, image_path: Path):
         self.image_path = image_path
@@ -287,6 +305,23 @@ def make_handler(data_dir: Path):
         def do_POST(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             path = parsed.path
+            if path.startswith("/api/ocr-box/"):
+                try:
+                    name = self._safe_name(path.removeprefix("/api/ocr-box/"))
+                    image_path = images_dir / name
+                    if not image_path.exists():
+                        raise FileNotFoundError(f"Image not found: {image_path}")
+
+                    content_length = int(self.headers.get("Content-Length", "0"))
+                    payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    bbox = [int(value) for value in payload["bbox"]]
+                    rotation = int(payload.get("rotation", 0)) % 360
+                    text = ocr_box_text(image_path, bbox=bbox, rotation=rotation)
+                    self._send_json({"text": text})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                return
+
             if not path.startswith("/api/label/"):
                 self._send_json({"error": "Not found"}, status=HTTPStatus.NOT_FOUND)
                 return
