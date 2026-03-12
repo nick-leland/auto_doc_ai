@@ -38,6 +38,16 @@ Generated documents span all 50 US states with randomized layouts, fonts, colors
 - Expand generation beyond titles to cover the broader DMV document set, including driver's licenses, registration forms, tax forms, and other supporting state paperwork.
 - Add support for more specialized and lower-frequency workflows such as salvage title packets, rebuilt title documentation, lien sale paperwork, and related exception-case title processing forms.
 
+## Synthetic OCR Baseline Progress
+
+Using a seeded synthetic split (`seed=42`) and the same held-out test pages throughout:
+
+- Baseline `Tesseract -> LayoutLMv3 (FUNSD checkpoint)` reached seqeval F1 `0.3888`.
+- Fine-tuning LayoutLMv3 on ground-truth tokens improved synthetic-token evaluation, but did not improve the real OCR pipeline.
+- Fine-tuning LayoutLMv3 on `Tesseract` tokens from the synthetic training set raised end-to-end seqeval F1 to `0.7819` on the same test split.
+
+This repo now includes local-only scripts for baseline evaluation, OCR-aware fine-tuning, single-page inference, and private real-world validation/annotation under `src/fine_tune_LayoutLMv3/`.
+
 ## Quick Start
 
 ### Requirements
