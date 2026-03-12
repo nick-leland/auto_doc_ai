@@ -1,7 +1,7 @@
 [project]
 name = "auto-doc-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "Synthetic DMV title document generation and local OCR/LayoutLMv3 experimentation toolkit"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

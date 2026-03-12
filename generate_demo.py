@@ -23,7 +23,8 @@ from src.utils.border_text import render_border_text
 from src.utils.state_insignia import add_state_insignia
 
 # --- Load all field values (front + back are in the same file now) ---
-with open("test_title.json") as f:
+FIXTURE_PATH = Path(__file__).resolve().parent / "examples" / "fixtures" / "test_title.json"
+with open(FIXTURE_PATH) as f:
     all_values = json.load(f)
 
 # Strip _comment keys used for documentation in the JSON

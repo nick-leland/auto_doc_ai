@@ -2,6 +2,20 @@
 
 Synthetic vehicle title document generator for training OCR, LayoutLMv3, and document understanding models. Produces realistic front + back title documents as SVG → PNG with pixel-accurate annotations in multiple formats.
 
+## Repository Layout
+
+- `generate_dataset.py`, `generate_demo.py`, `stress_test.py`: primary entrypoints for generation, quick previews, and layout stress checks
+- `src/document_layout/`: field layout definitions and page rendering
+- `src/utils/`: augmentation, annotation export, handwriting, machine text, borders, and background helpers
+- `src/data/`: fonts, state insignias, and border assets
+- `src/fine_tune_LayoutLMv3/`: local OCR, LayoutLMv3 evaluation, fine-tuning, and annotation tooling
+- `dataset_samples/`: small checked-in sample dataset used in the README
+- `examples/fixtures/`: hand-authored example field payloads and edge-case fixture inputs
+- `notebooks/`: exploratory notebooks and presentation-friendly walkthroughs
+- `docs/`: reference notes and supporting documentation
+
+Local-only working folders such as `dataset/`, `runs/`, and `real_validation/` are intended to stay out of version control.
+
 ## Sample Output
 
 Generated documents span all 50 US states with randomized layouts, fonts, colors, and ornate security patterns.

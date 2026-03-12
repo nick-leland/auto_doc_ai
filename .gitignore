@@ -208,6 +208,17 @@ marimo/_lsp/
 __marimo__/
 
 # General
-test*
+/test*
 real_validation/
 real_validation*/
+dataset/
+runs/
+demo_output/
+demo.png
+document.svg
+guilloche_border.png
+clean_guilloche_border.png
+intricate_guilloche_border.png
+AGENTS.md
+src/fine_tune_LayoutLMv3/models/
+src/fine_tune_LayoutLMv3/Fine_tune_LayoutLMv3_on_FUNSD_(HuggingFace_Trainer).ipynb

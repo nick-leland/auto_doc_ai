@@ -46,7 +46,8 @@ from src.utils.border_text import render_border_text
 from src.utils.state_insignia import add_state_insignia
 
 # Load all values
-with open("test_title.json") as f:
+FIXTURE_PATH = Path(__file__).resolve().parent / "examples" / "fixtures" / "test_title.json"
+with open(FIXTURE_PATH) as f:
     all_values = json.load(f)
 all_values = {k: v for k, v in all_values.items() if not k.startswith("_comment")}
 
