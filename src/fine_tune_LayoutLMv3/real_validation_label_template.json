@@ -1,0 +1,56 @@
+{
+  "image_size": [1200, 1560],
+  "doc_id": "page_0001",
+  "_bbox_format": "Use normalized [0..1000] boxes or absolute pixel boxes. If you use pixel boxes, keep image_size accurate.",
+  "_allowed_labels": [
+    "O",
+    "B-HEADER",
+    "I-HEADER",
+    "B-QUESTION",
+    "I-QUESTION",
+    "B-ANSWER",
+    "I-ANSWER"
+  ],
+  "tokens": [
+    {
+      "text": "CERTIFICATE",
+      "bbox": [52, 22, 239, 104],
+      "label": "B-HEADER"
+    },
+    {
+      "text": "OF",
+      "bbox": [239, 22, 332, 104],
+      "label": "I-HEADER"
+    },
+    {
+      "text": "TITLE",
+      "bbox": [332, 22, 465, 104],
+      "label": "I-HEADER"
+    },
+    {
+      "text": "VEHICLE",
+      "bbox": [57, 140, 300, 161],
+      "label": "B-QUESTION"
+    },
+    {
+      "text": "IDENTIFICATION",
+      "bbox": [300, 140, 755, 161],
+      "label": "I-QUESTION"
+    },
+    {
+      "text": "NUMBER",
+      "bbox": [755, 140, 943, 161],
+      "label": "I-QUESTION"
+    },
+    {
+      "text": "1FA97RNW5MC500265",
+      "bbox": [57, 161, 943, 182],
+      "label": "B-ANSWER"
+    },
+    {
+      "text": "VOID",
+      "bbox": [57, 902, 122, 912],
+      "label": "O"
+    }
+  ]
+}

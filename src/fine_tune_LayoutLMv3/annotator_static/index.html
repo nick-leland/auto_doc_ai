@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Validation Annotator</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>Annotator</h1>
+          <button id="refresh-images">Refresh</button>
+        </div>
+        <div id="image-list" class="image-list"></div>
+      </aside>
+      <main class="main-panel">
+        <div class="toolbar">
+          <button id="prev-image">Prev</button>
+          <button id="next-image">Next</button>
+          <button id="zoom-out">Zoom Out</button>
+          <button id="zoom-in">Zoom In</button>
+          <button id="zoom-reset">Reset Zoom</button>
+          <span id="zoom-text">100%</span>
+          <button id="toggle-select-box">Box Select</button>
+          <button id="rotate-left">Rotate Left</button>
+          <button id="rotate-right">Rotate Right</button>
+          <button id="toggle-add-box">Add Box</button>
+          <button id="save-labels">Save</button>
+          <button id="reset-annotations">Reset Annotations</button>
+          <button id="merge-tokens">Merge Tokens</button>
+          <button id="delete-token">Delete Token</button>
+          <button id="reload-ocr">Reload OCR</button>
+          <label class="toggle">
+            <input id="show-o-labels" type="checkbox" checked>
+            Show O labels
+          </label>
+          <span id="status-text"></span>
+        </div>
+        <div id="viewer" class="viewer">
+          <div id="image-stage" class="image-stage">
+            <div id="transform-layer" class="transform-layer">
+              <img id="page-image" alt="Document page">
+              <div id="box-layer" class="box-layer"></div>
+            </div>
+            <div id="draw-layer" class="draw-layer">
+              <div id="draft-box" class="draft-box hidden"></div>
+              <div id="selection-box" class="selection-box hidden"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <aside class="details-panel">
+        <h2>Token</h2>
+        <div class="field">
+          <label for="token-text">Text</label>
+          <input id="token-text" type="text">
+        </div>
+        <div class="field">
+          <label for="token-label">Label</label>
+          <select id="token-label">
+            <option value="">(unlabeled)</option>
+            <option>O</option>
+            <option>B-HEADER</option>
+            <option>I-HEADER</option>
+            <option>B-QUESTION</option>
+            <option>I-QUESTION</option>
+            <option>B-ANSWER</option>
+            <option>I-ANSWER</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="token-bbox">BBox</label>
+          <input id="token-bbox" type="text" readonly>
+        </div>
+        <p class="hint">
+          Click a box to edit it. Ctrl-click or Cmd-click to multi-select for merges. Use <code>Box Select</code> / <code>v</code>, then click two corners to select multiple tokens, or <code>Add Box</code> / <code>n</code> to click two corners and create a token when OCR misses text; the new box will immediately run local OCR using the current rotation. New OCR boxes start unlabeled. Keyboard shortcuts: <code>1</code>-<code>7</code> assign labels, <code>Arrow Keys</code> move boxes, <code>Shift</code>+<code>Arrow Keys</code> expand boxes, <code>Ctrl</code>/<code>Cmd</code>+<code>Arrow Keys</code> shrink boxes, <code>Alt</code> makes box nudges larger, <code>+</code>/<code>-</code> zoom, <code>0</code> resets zoom, and arrow controls follow the current rotation. <code>s</code> saves, <code>m</code> merges, <code>[</code>/<code>]</code> switches pages, <code>q</code>/<code>e</code> rotates, <code>Delete</code> removes the selected token, and <code>Esc</code> exits box-select or add-box mode. <code>Reload OCR</code> refreshes untouched OCR boxes but keeps edited, labeled, merged, deleted, and manually added tokens. <code>Reset Annotations</code> discards all changes for the current page after confirmation and rebuilds it from OCR.
+        </p>
+      </aside>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
